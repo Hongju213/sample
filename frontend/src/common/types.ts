@@ -48,5 +48,6 @@ export type GridItemDto = {
   col3: string;
   col4: string;
   col5: string;
+  path?: string;
   createdAt: string;
 };

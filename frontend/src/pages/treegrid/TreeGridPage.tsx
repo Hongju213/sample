@@ -1,12 +1,18 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
-import { Card, Tree, Tag, Typography, Space, Spin, Alert } from 'antd';
-import type { TreeProps } from 'antd';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, Card, Space, Spin, Tag, Tree, Typography } from 'antd';
+import type { DataNode, TreeProps } from 'antd/es/tree';
 import { useQuery } from '@tanstack/react-query';
 import { AgGridReact } from 'ag-grid-react';
-import { AllCommunityModule, ModuleRegistry, ColDef, GridReadyEvent } from 'ag-grid-community';
+import {
+  AllCommunityModule,
+  ColDef,
+  GridReadyEvent,
+  ICellRendererParams,
+  ModuleRegistry
+} from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
-import { fetchTreeNodes, fetchGridItems } from '../../apis/treeGridApi';
+import { fetchGridItems, fetchTreeNodes } from '../../apis/treeGridApi';
 import { GridItemDto, TreeNodeDto } from '../../common/types';
 import './TreeGridPage.css';
 
@@ -14,8 +20,25 @@ ModuleRegistry.registerModules([AllCommunityModule]);
 
 const { Title } = Typography;
 
-// TreeNodeDto → Ant Design Tree 형식으로 변환
-function toAntTreeData(nodes: TreeNodeDto[]): any[] {
+const PAGE_SIZE = 10;
+const TREE_NODE_MIME = 'application/x-tree-node';
+const TEXT_FIELDS = ['nodeKey', 'col1', 'col2', 'col3', 'col4', 'col5'] as const;
+
+type TextField = (typeof TEXT_FIELDS)[number];
+type DropField = TextField | 'path';
+type TreeDragData = Pick<TreeNodeDto, 'nodeKey' | 'nodeName'>;
+type GridRow = GridItemDto & { path: string };
+
+type GridDropContext = {
+  applyDrop: (rowId: number, field: DropField | 'row', dragData: TreeDragData) => void;
+  updateCell: (rowId: number, field: DropField, value: string) => void;
+};
+
+type DropRendererParams = ICellRendererParams<GridRow, string> & {
+  context: GridDropContext;
+};
+
+function toAntTreeData(nodes: TreeNodeDto[]): DataNode[] {
   return nodes.map(node => ({
     key: node.nodeKey,
     title: node.nodeName,
@@ -23,32 +46,151 @@ function toAntTreeData(nodes: TreeNodeDto[]): any[] {
   }));
 }
 
-const COLUMN_DEFS: ColDef<GridItemDto>[] = [
+function readTreeDragData(event: React.DragEvent): TreeDragData | null {
+  const raw = event.dataTransfer.getData(TREE_NODE_MIME);
+
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(raw) as TreeDragData;
+  } catch {
+    return null;
+  }
+}
+
+function appendPath(path: string | undefined, nodeName: string) {
+  const currentPath = (path ?? '').replace(/\/+$/g, '');
+  const nextSegment = nodeName.replace(/^\/+|\/+$/g, '');
+  return `${currentPath}/${nextSegment}`;
+}
+
+function applyDropToRow(row: GridRow, field: DropField | 'row', dragData: TreeDragData): GridRow {
+  if (field === 'path') {
+    return { ...row, path: appendPath(row.path, dragData.nodeName) };
+  }
+
+  if (field === 'row') {
+    return {
+      ...row,
+      ...Object.fromEntries(TEXT_FIELDS.map(textField => [textField, dragData.nodeName])),
+      path: appendPath(row.path, dragData.nodeName)
+    };
+  }
+
+  return { ...row, [field]: dragData.nodeName };
+}
+
+function RowDropRenderer(params: DropRendererParams) {
+  const handleDrop = useGridDrop(params, 'row');
+
+  return (
+    <label className="row-drop-cell" onDragOver={allowDrop} onDrop={handleDrop}>
+      <input
+        type="checkbox"
+        checked={params.node.isSelected()}
+        onChange={event => params.node.setSelected(event.target.checked)}
+      />
+    </label>
+  );
+}
+
+function TextDropRenderer(params: DropRendererParams) {
+  const field = params.colDef?.field as TextField;
+  const handleDrop = useGridDrop(params, field);
+
+  return (
+    <div className="drop-cell" onDragOver={allowDrop} onDrop={handleDrop}>
+      {params.value}
+    </div>
+  );
+}
+
+function PathDropRenderer(params: DropRendererParams) {
+  const value = params.value ?? '';
+  const handleDrop = useGridDrop(params, 'path');
+
+  return (
+    <input
+      className="path-input"
+      value={value}
+      onChange={event => params.context.updateCell(params.data!.id, 'path', event.target.value)}
+      onDragOver={allowDrop}
+      onDrop={handleDrop}
+    />
+  );
+}
+
+function allowDrop(event: React.DragEvent) {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'copy';
+}
+
+function useGridDrop(params: DropRendererParams, field: DropField | 'row') {
+  return useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const dragData = readTreeDragData(event);
+
+      if (!dragData || !params.data) {
+        return;
+      }
+
+      params.context.applyDrop(params.data.id, field, dragData);
+    },
+    [field, params]
+  );
+}
+
+const columnDefs: ColDef<GridRow>[] = [
   {
-    headerName: 'No',
-    valueGetter: p => (p.node?.rowIndex ?? 0) + 1,
-    width: 65,
+    colId: 'rowDrop',
+    headerName: '',
+    width: 48,
+    pinned: 'left',
+    resizable: false,
     sortable: false,
     filter: false,
-    pinned: 'left'
+    cellRenderer: RowDropRenderer
   },
-  { field: 'id',      headerName: 'ID',      width: 80,  filter: 'agNumberColumnFilter' },
-  { field: 'nodeKey', headerName: 'Node Key', width: 120, filter: 'agTextColumnFilter' },
-  { field: 'col1',    headerName: 'Col1',     flex: 1,    filter: 'agTextColumnFilter' },
-  { field: 'col2',    headerName: 'Col2',     flex: 1,    filter: 'agTextColumnFilter' },
-  { field: 'col3',    headerName: 'Col3',     width: 100, filter: 'agTextColumnFilter' },
-  { field: 'col4',    headerName: 'Col4',     width: 100, filter: 'agTextColumnFilter' },
-  { field: 'col5',    headerName: 'Col5',     width: 100, filter: 'agTextColumnFilter' }
+  {
+    headerName: 'No',
+    valueGetter: params => (params.node?.rowIndex ?? 0) + 1,
+    width: 64,
+    pinned: 'left',
+    sortable: false,
+    filter: false
+  },
+  { field: 'id', headerName: 'ID', width: 80, filter: 'agNumberColumnFilter' },
+  ...TEXT_FIELDS.map(
+    (field): ColDef<GridRow> => ({
+      field,
+      headerName: field === 'nodeKey' ? 'Node Key' : field.toUpperCase(),
+      width: field === 'nodeKey' ? 120 : 110,
+      flex: field.startsWith('col') ? 1 : undefined,
+      filter: 'agTextColumnFilter',
+      cellRenderer: TextDropRenderer
+    })
+  ),
+  {
+    field: 'path',
+    headerName: 'Path',
+    minWidth: 220,
+    flex: 1.4,
+    sortable: false,
+    filter: false,
+    cellRenderer: PathDropRenderer
+  }
 ];
-
-const PAGE_SIZE = 10;
 
 export default function TreeGridPage() {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
-  const gridRef = useRef<AgGridReact<GridItemDto>>(null);
+  const [gridRows, setGridRows] = useState<GridRow[]>([]);
 
-  // 트리 노드 조회
   const {
     data: treeNodes = [],
     isLoading: treeLoading,
@@ -59,9 +201,6 @@ export default function TreeGridPage() {
     staleTime: 300_000
   });
 
-  const treeData = useMemo(() => toAntTreeData(treeNodes), [treeNodes]);
-
-  // 선택된 노드의 그리드 데이터 조회
   const {
     data: gridPage,
     isLoading: gridLoading,
@@ -73,82 +212,108 @@ export default function TreeGridPage() {
     staleTime: 60_000
   });
 
-  const handleSelect: TreeProps['onSelect'] = useCallback((keys: React.Key[]) => {
-    if (keys.length > 0) {
-      setSelectedKey(String(keys[0]));
-      setCurrentPage(0);
-    }
-  }, []);
+  useEffect(() => {
+    setGridRows((gridPage?.content ?? []).map(row => ({ ...row, path: row.path ?? '' })));
+  }, [gridPage]);
 
-  const handleGridReady = useCallback((e: GridReadyEvent) => {
-    e.api.sizeColumnsToFit();
-  }, []);
+  const treeData = useMemo(() => toAntTreeData(treeNodes), [treeNodes]);
+  const gridContext = useMemo<GridDropContext>(
+    () => ({
+      applyDrop: (rowId, field, dragData) => {
+        setGridRows(rows =>
+          rows.map(row => (row.id === rowId ? applyDropToRow(row, field, dragData) : row))
+        );
+      },
+      updateCell: (rowId, field, value) => {
+        setGridRows(rows => rows.map(row => (row.id === rowId ? { ...row, [field]: value } : row)));
+      }
+    }),
+    []
+  );
 
-  const gridRows = gridPage?.content ?? [];
   const totalElements = gridPage?.totalElements ?? 0;
   const totalPages = gridPage?.totalPages ?? 0;
 
+  const handleSelect = useCallback<NonNullable<TreeProps['onSelect']>>(keys => {
+    setSelectedKey(keys.length > 0 ? String(keys[0]) : null);
+    setCurrentPage(0);
+  }, []);
+
+  const handleTreeDragStart = useCallback<NonNullable<TreeProps['onDragStart']>>(({ event, node }) => {
+    const dragData: TreeDragData = {
+      nodeKey: String(node.key),
+      nodeName: String(node.title)
+    };
+
+    event.dataTransfer.setData(TREE_NODE_MIME, JSON.stringify(dragData));
+    event.dataTransfer.setData('text/plain', dragData.nodeName);
+    event.dataTransfer.effectAllowed = 'copy';
+  }, []);
+
+  const handleGridReady = useCallback((event: GridReadyEvent) => {
+    event.api.sizeColumnsToFit();
+  }, []);
+
   return (
     <div className="tree-grid-page">
-      <Title level={4} style={{ marginBottom: 16 }}>트리 + 그리드</Title>
+      <Title level={4} className="tree-grid-title">
+        트리 + 그리드
+      </Title>
 
       <div className="tree-grid-layout">
-        {/* 좌측: 트리 패널 */}
         <Card title="트리" size="small" className="tree-panel">
-          {treeError && <Alert type="error" message="트리 데이터 조회 실패" showIcon />}
+          {treeError && <Alert type="error" message="트리 데이터를 불러오지 못했습니다." showIcon />}
           {treeLoading ? (
-            <Spin style={{ display: 'block', marginTop: 24 }} />
+            <Spin className="panel-spinner" />
           ) : (
             <Tree
               treeData={treeData}
               defaultExpandAll
+              draggable
+              blockNode
               selectedKeys={selectedKey ? [selectedKey] : []}
               onSelect={handleSelect}
-              blockNode
+              onDragStart={handleTreeDragStart}
               className="node-tree"
             />
           )}
         </Card>
 
-        {/* 우측: 그리드 패널 */}
         <Card
           size="small"
           className="grid-panel"
           title={
             <Space>
               <span>{selectedKey ? `[${selectedKey}] 데이터` : '노드를 선택하세요'}</span>
-              {selectedKey && !gridLoading && (
-                <Tag color="blue">총 {totalElements}건</Tag>
-              )}
+              {selectedKey && !gridLoading && <Tag color="blue">총 {totalElements}건</Tag>}
               {gridFetching && <Spin size="small" />}
             </Space>
           }
         >
           {!selectedKey ? (
-            <div className="grid-empty">
-              <span>좌측 트리에서 노드를 클릭하면 데이터가 조회됩니다.</span>
-            </div>
+            <div className="grid-empty">왼쪽 트리에서 노드를 선택하면 데이터가 조회됩니다.</div>
           ) : (
             <>
               <div className="ag-theme-quartz treegrid-grid">
-                <AgGridReact<GridItemDto>
-                  ref={gridRef}
-                  rowData={gridLoading ? undefined : gridRows}
-                  loading={gridLoading}
-                  columnDefs={COLUMN_DEFS}
+                <AgGridReact<GridRow>
+                  rowData={gridRows}
+                  loading={gridLoading && gridRows.length === 0}
+                  columnDefs={columnDefs}
                   defaultColDef={{ sortable: true, resizable: true }}
-                  rowSelection={{ mode: 'singleRow' }}
+                  rowSelection={{ mode: 'singleRow', checkboxes: false, enableClickSelection: true }}
+                  getRowId={params => String(params.data.id)}
+                  context={gridContext}
                   onGridReady={handleGridReady}
-                  overlayNoRowsTemplate="<span style='color:#999'>해당 노드의 데이터가 없습니다</span>"
+                  overlayNoRowsTemplate="<span style='color:#999'>해당 노드의 데이터가 없습니다.</span>"
                 />
               </div>
-              {/* 서버 사이드 페이지네이션 */}
+
               {totalPages > 1 && (
                 <div className="grid-pagination">
                   <button
                     className="pg-btn"
                     disabled={currentPage === 0}
-                    onClick={() => setCurrentPage(p => p - 1)}
+                    onClick={() => setCurrentPage(page => page - 1)}
                   >
                     이전
                   </button>
@@ -158,7 +323,7 @@ export default function TreeGridPage() {
                   <button
                     className="pg-btn"
                     disabled={currentPage >= totalPages - 1}
-                    onClick={() => setCurrentPage(p => p + 1)}
+                    onClick={() => setCurrentPage(page => page + 1)}
                   >
                     다음
                   </button>
