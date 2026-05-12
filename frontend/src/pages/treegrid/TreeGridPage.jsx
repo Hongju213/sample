@@ -4,8 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import { AgGridReact } from 'ag-grid-react';
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import 'ag-grid-community/styles/ag-grid.css';
-import 'ag-grid-community/styles/ag-theme-quartz.css';
 import { fetchGridItems, fetchTreeNodes } from '../../apis/treeGridApi.js';
 import './TreeGridPage.css';
 
@@ -15,7 +13,7 @@ const { Title } = Typography;
 
 const PAGE_SIZE = 10;
 const TREE_NODE_MIME = 'application/x-tree-node';
-const TEXT_FIELDS = ['nodeKey', 'col1', 'col2', 'col3', 'col4', 'col5'];
+const DROP_FIELDS = ['col1', 'col2', 'col3', 'col4', 'col5'];
 
 function toAntTreeData(nodes) {
   return nodes.map(node => ({
@@ -27,7 +25,6 @@ function toAntTreeData(nodes) {
 
 function readTreeDragData(event) {
   const raw = event.dataTransfer.getData(TREE_NODE_MIME);
-
   if (!raw) {
     return null;
   }
@@ -53,7 +50,7 @@ function applyDropToRow(row, field, dragData) {
   if (field === 'row') {
     return {
       ...row,
-      ...Object.fromEntries(TEXT_FIELDS.map(textField => [textField, dragData.nodeName])),
+      ...Object.fromEntries(DROP_FIELDS.map(dropField => [dropField, dragData.nodeName])),
       path: appendPath(row.path, dragData.nodeName)
     };
   }
@@ -73,12 +70,11 @@ function useGridDrop(params, field) {
       event.stopPropagation();
 
       const dragData = readTreeDragData(event);
-
-      if (!dragData || !params.data) {
+      if (!dragData || !params.data || !params.applyDrop) {
         return;
       }
 
-      params.context.applyDrop(params.data.id, field, dragData);
+      params.applyDrop(params.data.id, field, dragData);
     },
     [field, params]
   );
@@ -117,7 +113,7 @@ function PathDropRenderer(params) {
     <input
       className="path-input"
       value={value}
-      onChange={event => params.context.updateCell(params.data.id, 'path', event.target.value)}
+      onChange={event => params.updateCell?.(params.data.id, 'path', event.target.value)}
       onDragOver={allowDrop}
       onDrop={handleDrop}
     />
@@ -156,20 +152,22 @@ export default function TreeGridPage() {
 
   const treeData = useMemo(() => toAntTreeData(treeNodes), [treeNodes]);
 
-  // AG Grid cellRenderer에서 직접 React state setter를 부르지 않도록 context로 얇게 전달한다.
-  // 드롭 규칙이 바뀌어도 이 객체의 applyDrop/updateCell 두 함수만 따라가면 된다.
-  const gridContext = useMemo(
+  const applyGridDrop = useCallback((rowId, field, dragData) => {
+    setGridRows(rows =>
+      rows.map(row => (row.id === rowId ? applyDropToRow(row, field, dragData) : row))
+    );
+  }, []);
+
+  const updateGridCell = useCallback((rowId, field, value) => {
+    setGridRows(rows => rows.map(row => (row.id === rowId ? { ...row, [field]: value } : row)));
+  }, []);
+
+  const rendererParams = useMemo(
     () => ({
-      applyDrop: (rowId, field, dragData) => {
-        setGridRows(rows =>
-          rows.map(row => (row.id === rowId ? applyDropToRow(row, field, dragData) : row))
-        );
-      },
-      updateCell: (rowId, field, value) => {
-        setGridRows(rows => rows.map(row => (row.id === rowId ? { ...row, [field]: value } : row)));
-      }
+      applyDrop: applyGridDrop,
+      updateCell: updateGridCell
     }),
-    []
+    [applyGridDrop, updateGridCell]
   );
 
   const columnDefs = useMemo(
@@ -182,7 +180,8 @@ export default function TreeGridPage() {
         resizable: false,
         sortable: false,
         filter: false,
-        cellRenderer: RowDropRenderer
+        cellRenderer: RowDropRenderer,
+        cellRendererParams: rendererParams
       },
       {
         headerName: 'No',
@@ -193,13 +192,15 @@ export default function TreeGridPage() {
         filter: false
       },
       { field: 'id', headerName: 'ID', width: 80, filter: 'agNumberColumnFilter' },
-      ...TEXT_FIELDS.map(field => ({
+      { field: 'nodeKey', headerName: 'Node Key', width: 120, filter: 'agTextColumnFilter' },
+      ...DROP_FIELDS.map(field => ({
         field,
-        headerName: field === 'nodeKey' ? 'Node Key' : field.toUpperCase(),
-        width: field === 'nodeKey' ? 120 : 110,
-        flex: field.startsWith('col') ? 1 : undefined,
+        headerName: field.toUpperCase(),
+        width: 110,
+        flex: 1,
         filter: 'agTextColumnFilter',
-        cellRenderer: TextDropRenderer
+        cellRenderer: TextDropRenderer,
+        cellRendererParams: rendererParams
       })),
       {
         field: 'path',
@@ -208,10 +209,11 @@ export default function TreeGridPage() {
         flex: 1.4,
         sortable: false,
         filter: false,
-        cellRenderer: PathDropRenderer
+        cellRenderer: PathDropRenderer,
+        cellRendererParams: rendererParams
       }
     ],
-    []
+    [rendererParams]
   );
 
   const totalElements = gridPage?.totalElements ?? 0;
@@ -228,8 +230,6 @@ export default function TreeGridPage() {
       nodeName: String(node.title)
     };
 
-    // 브라우저 drag/drop은 문자열만 전달하므로 JSON으로 직렬화한다.
-    // text/plain도 같이 넣어두면 디버깅과 브라우저 기본 동작 확인이 쉽다.
     event.dataTransfer.setData(TREE_NODE_MIME, JSON.stringify(dragData));
     event.dataTransfer.setData('text/plain', dragData.nodeName);
     event.dataTransfer.effectAllowed = 'copy';
@@ -242,12 +242,12 @@ export default function TreeGridPage() {
   return (
     <div className="tree-grid-page">
       <Title level={4} className="tree-grid-title">
-        트리 + 그리드
+        Tree + Grid
       </Title>
 
       <div className="tree-grid-layout">
-        <Card title="트리" size="small" className="tree-panel">
-          {treeError && <Alert type="error" message="트리 데이터를 불러오지 못했습니다." showIcon />}
+        <Card title="Tree" size="small" className="tree-panel">
+          {treeError && <Alert type="error" message="Tree data could not be loaded." showIcon />}
           {treeLoading ? (
             <Spin className="panel-spinner" />
           ) : (
@@ -264,22 +264,20 @@ export default function TreeGridPage() {
           )}
         </Card>
 
-        <Card
-          size="small"
-          className="grid-panel"
-          title={
+        <section className="grid-panel">
+          <div className="grid-panel-header">
             <Space>
-              <span>{selectedKey ? `[${selectedKey}] 데이터` : '노드를 선택하세요'}</span>
-              {selectedKey && !gridLoading && <Tag color="blue">총 {totalElements}건</Tag>}
+              <span>{selectedKey ? `[${selectedKey}] Data` : 'Select a node'}</span>
+              {selectedKey && !gridLoading && <Tag color="blue">Total {totalElements}</Tag>}
               {gridFetching && <Spin size="small" />}
             </Space>
-          }
-        >
+          </div>
+
           {!selectedKey ? (
-            <div className="grid-empty">왼쪽 트리에서 노드를 선택하면 데이터가 조회됩니다.</div>
+            <div className="grid-empty">Select a node from the tree to load grid rows.</div>
           ) : (
             <>
-              <div className="ag-theme-quartz treegrid-grid">
+              <div className="treegrid-grid">
                 <AgGridReact
                   rowData={gridRows}
                   loading={gridLoading && gridRows.length === 0}
@@ -287,9 +285,8 @@ export default function TreeGridPage() {
                   defaultColDef={{ sortable: true, resizable: true }}
                   rowSelection={{ mode: 'singleRow', checkboxes: false, enableClickSelection: true }}
                   getRowId={params => String(params.data.id)}
-                  context={gridContext}
                   onGridReady={handleGridReady}
-                  overlayNoRowsTemplate="<span style='color:#999'>해당 노드의 데이터가 없습니다.</span>"
+                  overlayNoRowsTemplate="<span style='color:#999'>No rows for this node.</span>"
                 />
               </div>
 
@@ -300,7 +297,7 @@ export default function TreeGridPage() {
                     disabled={currentPage === 0}
                     onClick={() => setCurrentPage(page => page - 1)}
                   >
-                    이전
+                    Prev
                   </button>
                   <span className="pg-info">
                     {currentPage + 1} / {totalPages}
@@ -310,13 +307,13 @@ export default function TreeGridPage() {
                     disabled={currentPage >= totalPages - 1}
                     onClick={() => setCurrentPage(page => page + 1)}
                   >
-                    다음
+                    Next
                   </button>
                 </div>
               )}
             </>
           )}
-        </Card>
+        </section>
       </div>
     </div>
   );

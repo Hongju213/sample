@@ -6,8 +6,6 @@ import { AgGridReact } from 'ag-grid-react';
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community';
 import dayjs from 'dayjs';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import 'ag-grid-community/styles/ag-grid.css';
-import 'ag-grid-community/styles/ag-theme-quartz.css';
 import { fetchSampleItems } from '../../apis/sampleItemApi.js';
 import { statusLabels } from '../../utils/format.js';
 import './TemplatePage.css';
@@ -176,7 +174,7 @@ export default function TemplatePage() {
           </Button>
         }
       >
-        <div className="ag-theme-quartz template-grid">
+        <div className="template-grid">
           <AgGridReact
             ref={gridRef}
             rowData={rows}
