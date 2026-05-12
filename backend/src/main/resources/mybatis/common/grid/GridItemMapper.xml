@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.sample.grid.mapper.GridItemMapper">
+
+    <resultMap id="GridItemDtoResultMap" type="com.example.sample.grid.dto.GridItemDto">
+        <id  property="id"        column="ID"/>
+        <result property="nodeKey"   column="NODE_KEY"/>
+        <result property="col1"      column="COL1"/>
+        <result property="col2"      column="COL2"/>
+        <result property="col3"      column="COL3"/>
+        <result property="col4"      column="COL4"/>
+        <result property="col5"      column="COL5"/>
+        <result property="createdAt" column="CREATED_AT"/>
+    </resultMap>
+
+    <sql id="searchWhere">
+        <where>
+            <if test="dto.nodeKey != null and dto.nodeKey != ''">
+                AND NODE_KEY = #{dto.nodeKey}
+            </if>
+            <if test="dto.col1 != null and dto.col1 != ''">
+                AND LOWER(COL1) LIKE '%' || LOWER(#{dto.col1}) || '%'
+            </if>
+        </where>
+    </sql>
+
+    <select id="findAllByGridItemDto" resultMap="GridItemDtoResultMap">
+        SELECT ID, NODE_KEY, COL1, COL2, COL3, COL4, COL5, CREATED_AT
+        FROM GRID_ITEM
+        <include refid="searchWhere"/>
+        ORDER BY ID ASC
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countByGridItemDto" resultType="int">
+        SELECT COUNT(*)
+        FROM GRID_ITEM
+        <include refid="searchWhere"/>
+    </select>
+
+</mapper>

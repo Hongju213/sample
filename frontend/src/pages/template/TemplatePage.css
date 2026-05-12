@@ -1,0 +1,92 @@
+.template-page {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.search-card {
+  flex-shrink: 0;
+}
+
+.grid-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.grid-card .ant-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  min-height: 0;
+}
+
+.template-grid {
+  flex: 1;
+  min-height: 360px;
+}
+
+/* 서버 사이드 페이지 버튼 */
+.template-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 0;
+  border-top: 1px solid #f0f0f0;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.pg-btn {
+  padding: 4px 10px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.15s;
+  min-width: 36px;
+}
+
+.pg-btn:hover:not(:disabled) {
+  background: #f0f5ff;
+  border-color: #1f6feb;
+  color: #1f6feb;
+}
+
+.pg-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pg-btn--active {
+  background: #1f6feb;
+  border-color: #1f6feb;
+  color: #fff;
+  font-weight: 600;
+}
+
+.pg-btn--active:hover {
+  background: #1557c0 !important;
+  color: #fff !important;
+}
+
+/* ag-grid 내부 상태 배지 */
+.status-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-tag.status-todo  { background: #f0f0f0; color: #595959; }
+.status-tag.status-doing { background: #e6f4ff; color: #1677ff; }
+.status-tag.status-done  { background: #f6ffed; color: #52c41a; }

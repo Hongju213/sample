@@ -56,7 +56,7 @@ import {
   fetchSampleItems,
   updateSampleItem
 } from '../../apis/sampleItemApi';
-import { SampleItem, SampleItemPayload, SampleItemStatus } from '../../common/types';
+import { SampleItemDto as SampleItem, SampleItemSavePayload as SampleItemPayload, SampleItemStatus } from '../../common/types';
 import { transferItems, treeData } from '../../dev/sampleData';
 import { formatDateTime, statusColor } from '../../utils/format';
 import './SamplePage.css';
@@ -80,7 +80,8 @@ export default function SamplePage() {
   const loadItems = async (nextKeyword = keyword) => {
     setLoading(true);
     try {
-      setItems(await fetchSampleItems(nextKeyword));
+      const page = await fetchSampleItems({ keyword: nextKeyword || undefined });
+      setItems(page.content);
     } catch (error) {
       message.error('API 호출에 실패했습니다. 백엔드와 인증 정보를 확인하세요.');
     } finally {
