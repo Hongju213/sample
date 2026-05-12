@@ -1,0 +1,47 @@
+.app-shell {
+  min-height: 100vh;
+}
+
+.app-menu {
+  background: transparent;
+}
+
+.app-header {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 20px;
+  border-bottom: 1px solid #edf0f5;
+}
+
+.app-auth-form {
+  flex-wrap: nowrap;
+}
+
+.app-auth-field {
+  margin-inline-end: 8px;
+}
+
+.app-auth-id {
+  width: 120px;
+}
+
+.app-auth-password {
+  width: 140px;
+}
+
+@media (max-width: 860px) {
+  .app-header {
+    height: auto;
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 14px 16px;
+  }
+
+  .app-auth-form {
+    width: 100%;
+    row-gap: 8px;
+  }
+}

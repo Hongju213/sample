@@ -12,6 +12,9 @@ backend/.mvn/wrapper/maven-wrapper.jar
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
+frontend/.vite-dev.pid
+frontend/.vite-dev.*.log
+frontend/*.tsbuildinfo
 frontend/.env
 
 # Logs

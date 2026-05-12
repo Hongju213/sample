@@ -1,5 +1,6 @@
 import { ApiOutlined, DatabaseOutlined, DesktopOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { Card, Col, Descriptions, Row, Statistic, Steps, Tag, Typography } from 'antd';
+import './HomePage.css';
 
 export default function HomePage() {
   return (
@@ -31,7 +32,7 @@ export default function HomePage() {
         </Col>
       </Row>
 
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+      <Row gutter={[16, 16]} className="home-detail-row">
         <Col xs={24} lg={14}>
           <Card title="실행 순서">
             <Steps
@@ -53,7 +54,7 @@ export default function HomePage() {
                 <Tag color="green">READY</Tag>
               </Descriptions.Item>
             </Descriptions>
-            <Typography.Paragraph style={{ marginTop: 12, marginBottom: 0 }}>
+            <Typography.Paragraph className="home-note">
               `/sample` 화면에서 CRUD API와 Ant Design 컴포넌트 샘플을 함께 확인할 수 있습니다.
             </Typography.Paragraph>
           </Card>

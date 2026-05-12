@@ -1,0 +1,24 @@
+.sample-search {
+  width: 220px;
+}
+
+.sample-stack {
+  width: 100%;
+}
+
+.sample-full-width {
+  width: 100%;
+}
+
+.sample-timeline {
+  margin-top: 16px;
+}
+
+.sample-transfer .ant-transfer-list {
+  width: 150px;
+  height: 180px;
+}
+
+.sample-card-title {
+  margin: 0;
+}

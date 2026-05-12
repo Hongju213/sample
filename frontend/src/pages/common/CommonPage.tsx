@@ -1,5 +1,6 @@
 import { CheckCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { Alert, Card, Col, Empty, Result, Row, Skeleton, Typography } from 'antd';
+import './CommonPage.css';
 
 export default function CommonPage() {
   return (
@@ -33,7 +34,7 @@ export default function CommonPage() {
         <Col span={24}>
           <Card>
             <Result
-              icon={<CheckCircleOutlined style={{ color: '#2e7d32' }} />}
+              icon={<CheckCircleOutlined className="common-success-icon" />}
               title="공통 처리 완료"
               subTitle="결과, 에러, 권한 없음 화면은 이 페이지를 기준으로 확장하면 됩니다."
             />

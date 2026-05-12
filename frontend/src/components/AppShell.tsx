@@ -4,6 +4,7 @@ import { PropsWithChildren } from 'react';
 import { useLocation } from 'react-router-dom';
 import { menuItems } from '../contants/menu';
 import { useAuthStore } from '../store/authStore';
+import './AppShell.css';
 
 const { Header, Sider, Content } = Layout;
 
@@ -13,7 +14,7 @@ export function AppShell({ children }: PropsWithChildren) {
   const [form] = Form.useForm();
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout className="app-shell">
       <Sider breakpoint="lg" collapsedWidth={0} width={230}>
         <div className="app-logo">
           <span className="app-logo-mark">S</span>
@@ -24,32 +25,24 @@ export function AppShell({ children }: PropsWithChildren) {
           mode="inline"
           selectedKeys={[location.pathname]}
           items={menuItems}
-          style={{ background: 'transparent' }}
+          className="app-menu"
         />
       </Sider>
       <Layout>
-        <Header
-          style={{
-            height: 64,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0 20px',
-            borderBottom: '1px solid #edf0f5'
-          }}
-        >
+        <Header className="app-header">
           <Typography.Text strong>Java 21 + React 18 + Oracle + MyBatis</Typography.Text>
           <Form
             form={form}
             layout="inline"
             initialValues={{ username, password }}
             onFinish={(values) => setCredentials(values.username, values.password)}
+            className="app-auth-form"
           >
-            <Form.Item name="username" style={{ marginInlineEnd: 8 }}>
-              <Input prefix={<KeyOutlined />} placeholder="ID" style={{ width: 120 }} />
+            <Form.Item name="username" className="app-auth-field">
+              <Input prefix={<KeyOutlined />} placeholder="ID" className="app-auth-id" />
             </Form.Item>
-            <Form.Item name="password" style={{ marginInlineEnd: 8 }}>
-              <Input.Password placeholder="Password" style={{ width: 140 }} />
+            <Form.Item name="password" className="app-auth-field">
+              <Input.Password placeholder="Password" className="app-auth-password" />
             </Form.Item>
             <Space>
               <Button type="primary" htmlType="submit">

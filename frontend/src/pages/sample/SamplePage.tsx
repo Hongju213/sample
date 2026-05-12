@@ -59,6 +59,7 @@ import {
 import { SampleItem, SampleItemPayload, SampleItemStatus } from '../../common/types';
 import { transferItems, treeData } from '../../dev/sampleData';
 import { formatDateTime, statusColor } from '../../utils/format';
+import './SamplePage.css';
 
 const statusOptions: { label: string; value: SampleItemStatus }[] = [
   { label: '대기', value: 'TODO' },
@@ -230,7 +231,7 @@ export default function SamplePage() {
                   value={keyword}
                   onChange={(event) => setKeyword(event.target.value)}
                   onSearch={(value) => loadItems(value)}
-                  style={{ width: 220 }}
+                  className="sample-search"
                 />
                 <Button icon={<ReloadOutlined />} onClick={() => loadItems()} />
               </Space>
@@ -252,18 +253,18 @@ export default function SamplePage() {
 
       <div className="sample-grid">
         <Card title="기본 입력">
-          <Space direction="vertical" style={{ width: '100%' }}>
+          <Space direction="vertical" className="sample-stack">
             <Input placeholder="Input" />
             <Input.Password placeholder="Password" />
-            <InputNumber min={0} max={100} defaultValue={12} style={{ width: '100%' }} />
+            <InputNumber min={0} max={100} defaultValue={12} className="sample-full-width" />
             <Select defaultValue="A" options={[{ value: 'A' }, { value: 'B' }, { value: 'C' }]} />
-            <DatePicker style={{ width: '100%' }} />
-            <TimePicker style={{ width: '100%' }} />
+            <DatePicker className="sample-full-width" />
+            <TimePicker className="sample-full-width" />
           </Space>
         </Card>
 
         <Card title="선택 컨트롤">
-          <Space direction="vertical" style={{ width: '100%' }}>
+          <Space direction="vertical" className="sample-stack">
             <Checkbox.Group options={['조회', '등록', '수정', '삭제']} defaultValue={['조회']} />
             <Radio.Group defaultValue="daily" options={[{ label: '일간', value: 'daily' }, { label: '월간', value: 'monthly' }]} />
             <Segmented options={['목록', '차트', '설정']} />
@@ -274,7 +275,7 @@ export default function SamplePage() {
         </Card>
 
         <Card title="피드백">
-          <Space direction="vertical" style={{ width: '100%' }}>
+          <Space direction="vertical" className="sample-stack">
             <Alert type="success" showIcon message="저장되었습니다." />
             <Spin spinning={loading}>
               <Typography.Text>로딩 상태는 Spin으로 감쌉니다.</Typography.Text>
@@ -346,7 +347,7 @@ export default function SamplePage() {
             ]}
           />
           <Timeline
-            style={{ marginTop: 16 }}
+            className="sample-timeline"
             items={[
               { color: 'green', children: '요청 접수' },
               { color: 'blue', children: '처리 중' },
@@ -363,13 +364,13 @@ export default function SamplePage() {
             targetKeys={targetKeys}
             onChange={(nextKeys) => setTargetKeys(nextKeys as string[])}
             render={(item) => item.title}
-            listStyle={{ width: 150, height: 180 }}
+            className="sample-transfer"
           />
         </Card>
 
         <Card title="업무 카드">
-          <Space direction="vertical" style={{ width: '100%' }}>
-            <Typography.Title level={5} style={{ margin: 0 }}>
+          <Space direction="vertical" className="sample-stack">
+            <Typography.Title level={5} className="sample-card-title">
               업무 상태
             </Typography.Title>
             <Typography.Paragraph type="secondary">
