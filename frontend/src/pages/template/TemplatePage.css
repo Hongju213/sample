@@ -1,0 +1,57 @@
+.template-page {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.search-card {
+  flex-shrink: 0;
+}
+
+.grid-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.grid-card .ant-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  min-height: 0;
+}
+
+.template-grid {
+  flex: 1;
+  min-height: 400px;
+  height: 100%;
+}
+
+/* Status badge styles rendered inside ag-grid */
+.status-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-tag.status-todo {
+  background: #f0f0f0;
+  color: #595959;
+}
+
+.status-tag.status-doing {
+  background: #e6f4ff;
+  color: #1677ff;
+}
+
+.status-tag.status-done {
+  background: #f6ffed;
+  color: #52c41a;
+}

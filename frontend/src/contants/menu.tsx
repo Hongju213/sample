@@ -1,4 +1,11 @@
-import { AppstoreOutlined, HomeOutlined, SettingOutlined, ToolOutlined } from '@ant-design/icons';
+import {
+  AppstoreOutlined,
+  HomeOutlined,
+  SettingOutlined,
+  ToolOutlined,
+  TableOutlined,
+  ApartmentOutlined
+} from '@ant-design/icons';
 import { MenuProps } from 'antd';
 import { Link } from 'react-router-dom';
 
@@ -22,5 +29,15 @@ export const menuItems: MenuProps['items'] = [
     key: '/common',
     icon: <ToolOutlined />,
     label: <Link to="/common">공통</Link>
+  },
+  {
+    key: '/template',
+    icon: <TableOutlined />,
+    label: <Link to="/template">템플릿</Link>
+  },
+  {
+    key: '/tree-grid',
+    icon: <ApartmentOutlined />,
+    label: <Link to="/tree-grid">트리+그리드</Link>
   }
 ];
