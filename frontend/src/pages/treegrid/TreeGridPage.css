@@ -13,7 +13,8 @@
   min-height: 0;
 }
 
-/* 좌측 트리 */
+/* ── 트리 패널 ───────────────────────────────────────────────────────────── */
+
 .tree-panel {
   width: 200px;
   flex-shrink: 0;
@@ -28,11 +29,41 @@
 }
 
 .node-tree .ant-tree-node-content-wrapper {
+  user-select: none;
+}
+
+/* 드래그 가능한 노드 라벨 */
+.tree-node-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 4px;
+  padding: 1px 4px;
   font-size: 13px;
   font-family: monospace;
 }
 
-/* 우측 그리드 */
+.tree-node-label.draggable {
+  cursor: grab;
+  transition: background 0.15s;
+}
+
+.tree-node-label.draggable:hover {
+  background: rgba(31, 111, 235, 0.1);
+}
+
+.tree-node-label.draggable:active {
+  cursor: grabbing;
+}
+
+.drag-icon {
+  font-size: 10px;
+  color: #aaa;
+  flex-shrink: 0;
+}
+
+/* ── 그리드 패널 ─────────────────────────────────────────────────────────── */
+
 .grid-panel {
   flex: 1;
   display: flex;
@@ -54,50 +85,62 @@
   min-height: 360px;
 }
 
-.grid-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 360px;
-  color: #bbb;
-  font-size: 14px;
+/* ── 드래그&드롭 셀 하이라이트 ───────────────────────────────────────────── */
+
+/* 체크박스 영역 드롭: 파란색 (전체 행 적용) */
+.ag-cell.dnd-over-checkbox {
+  background-color: rgba(31, 111, 235, 0.18) !important;
+  outline: 2px solid #1f6feb;
+  outline-offset: -2px;
 }
 
-/* 서버 사이드 페이지 버튼 */
-.grid-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 6px 0;
-  border-top: 1px solid #f0f0f0;
-  flex-shrink: 0;
+/* 일반 컬럼 드롭: 초록색 (해당 컬럼만 적용) */
+.ag-cell.dnd-over-col {
+  background-color: rgba(82, 196, 26, 0.18) !important;
+  outline: 2px solid #52c41a;
+  outline-offset: -2px;
 }
 
-.pg-btn {
-  padding: 4px 14px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  background: #fff;
-  cursor: pointer;
-  font-size: 13px;
-  transition: background 0.2s;
+/* 경로 컬럼 드롭: 보라색 (누적) */
+.ag-cell.dnd-over-path {
+  background-color: rgba(114, 46, 209, 0.18) !important;
+  outline: 2px solid #722ed1;
+  outline-offset: -2px;
 }
 
-.pg-btn:hover:not(:disabled) {
-  background: #f0f5ff;
-  border-color: #1f6feb;
-  color: #1f6feb;
-}
-
-.pg-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.pg-info {
-  font-size: 13px;
+/* 경로 셀 스타일 */
+.ag-cell[col-id="path"] {
+  font-family: monospace;
+  font-size: 12px;
   color: #555;
-  min-width: 60px;
-  text-align: center;
 }
+
+/* ── 사용 안내 힌트 ──────────────────────────────────────────────────────── */
+
+.dnd-hint {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 6px 4px 2px;
+  font-size: 12px;
+  color: #888;
+  flex-shrink: 0;
+  border-top: 1px solid #f0f0f0;
+}
+
+.hint-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hint-item code {
+  background: #f5f5f5;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+.hint-checkbox { color: #1f6feb; }
+.hint-col      { color: #52c41a; }
+.hint-path     { color: #722ed1; }
