@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.sample.tree.mapper.TreeNodeMapper">
+
+    <resultMap id="TreeNodeDtoResultMap" type="com.example.sample.tree.dto.TreeNodeDto">
+        <id  property="id"         column="ID"/>
+        <result property="nodeKey"    column="NODE_KEY"/>
+        <result property="nodeName"   column="NODE_NAME"/>
+        <result property="parentKey"  column="PARENT_KEY"/>
+        <result property="levelNo"    column="LEVEL_NO"/>
+        <result property="sortOrder"  column="SORT_ORDER"/>
+    </resultMap>
+
+    <select id="findAllByTreeNodeDto" resultMap="TreeNodeDtoResultMap">
+        SELECT ID, NODE_KEY, NODE_NAME, PARENT_KEY, LEVEL_NO, SORT_ORDER
+        FROM TREE_NODE
+        <where>
+            <if test="dto.nodeKey != null and dto.nodeKey != ''">
+                AND NODE_KEY = #{dto.nodeKey}
+            </if>
+            <if test="dto.parentKey != null and dto.parentKey != ''">
+                AND PARENT_KEY = #{dto.parentKey}
+            </if>
+        </where>
+        ORDER BY LEVEL_NO ASC, SORT_ORDER ASC
+    </select>
+
+</mapper>

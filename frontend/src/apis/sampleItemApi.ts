@@ -1,29 +1,39 @@
-import { ApiResponse, SampleItem, SampleItemPayload } from '../common/types';
+import { PageResponse, SampleItemDto, SampleItemSavePayload } from '../common/types';
 import { http } from './http';
 
-export async function fetchSampleItems(keyword?: string) {
-  const { data } = await http.get<ApiResponse<SampleItem[]>>('/api/sample-items', {
-    params: { keyword }
-  });
-  return data.data;
+export type SampleItemSearchParams = {
+  keyword?: string;
+  status?: string;
+  page?: number;
+  size?: number;
+  sort?: string;
+};
+
+export async function fetchSampleItems(params: SampleItemSearchParams = {}): Promise<PageResponse<SampleItemDto>> {
+  const { data } = await http.get<PageResponse<SampleItemDto>>('/api/sample-items', { params });
+  return data;
 }
 
-export async function createSampleItem(payload: SampleItemPayload) {
-  const { data } = await http.post<ApiResponse<SampleItem>>('/api/sample-items', payload);
-  return data.data;
+export async function fetchSampleItemById(id: number): Promise<SampleItemDto> {
+  const { data } = await http.get<SampleItemDto>(`/api/sample-items/${id}`);
+  return data;
 }
 
-export async function updateSampleItem(id: number, payload: SampleItemPayload) {
-  const { data } = await http.put<ApiResponse<SampleItem>>(`/api/sample-items/${id}`, payload);
-  return data.data;
+export async function createSampleItem(payload: SampleItemSavePayload): Promise<SampleItemDto> {
+  const { data } = await http.post<SampleItemDto>('/api/sample-items', payload);
+  return data;
 }
 
-export async function deleteSampleItem(id: number) {
-  const { data } = await http.delete<ApiResponse<{ id: number }>>(`/api/sample-items/${id}`);
-  return data.data;
+export async function updateSampleItem(id: number, payload: SampleItemSavePayload): Promise<SampleItemDto> {
+  const { data } = await http.put<SampleItemDto>(`/api/sample-items/${id}`, payload);
+  return data;
+}
+
+export async function deleteSampleItem(id: number): Promise<void> {
+  await http.delete(`/api/sample-items/${id}`);
 }
 
 export async function fetchCurrentUser() {
-  const { data } = await http.get<ApiResponse<{ username: string }>>('/api/auth/me');
-  return data.data;
+  const { data } = await http.get<{ username: string }>('/api/auth/me');
+  return data;
 }

@@ -1,217 +1,170 @@
-import { useState, useCallback, useRef } from 'react';
-import { Card, Tree, Tag, Typography, Space, Spin, Empty } from 'antd';
-import type { TreeDataNode, TreeProps } from 'antd';
+import { useState, useCallback, useRef, useMemo } from 'react';
+import { Card, Tree, Tag, Typography, Space, Spin, Alert } from 'antd';
+import type { TreeProps } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { AgGridReact } from 'ag-grid-react';
 import { AllCommunityModule, ModuleRegistry, ColDef, GridReadyEvent } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
-import { fetchDepartmentEmployees, Employee } from '../../apis/treeGridApi';
+import { fetchTreeNodes, fetchGridItems } from '../../apis/treeGridApi';
+import { GridItemDto, TreeNodeDto } from '../../common/types';
 import './TreeGridPage.css';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 
-const TREE_DATA: TreeDataNode[] = [
-  {
-    key: 'root',
-    title: '전체',
-    children: [
-      {
-        key: 'dev',
-        title: '개발본부',
-        children: [
-          { key: 'frontend', title: '프론트엔드팀' },
-          { key: 'backend', title: '백엔드팀' },
-          { key: 'devops', title: 'DevOps팀' }
-        ]
-      },
-      {
-        key: 'plan',
-        title: '기획본부',
-        children: [
-          { key: 'product', title: '제품기획팀' },
-          { key: 'ux', title: 'UX팀' }
-        ]
-      },
-      {
-        key: 'mgmt',
-        title: '경영지원본부',
-        children: [
-          { key: 'hr', title: '인사팀' },
-          { key: 'finance', title: '재무팀' }
-        ]
-      }
-    ]
-  }
-];
+// TreeNodeDto → Ant Design Tree 형식으로 변환
+function toAntTreeData(nodes: TreeNodeDto[]): any[] {
+  return nodes.map(node => ({
+    key: node.nodeKey,
+    title: node.nodeName,
+    children: node.children?.length ? toAntTreeData(node.children) : undefined
+  }));
+}
 
-const STATUS_COLOR: Record<Employee['status'], string> = {
-  active: 'green',
-  leave: 'orange',
-  inactive: 'default'
-};
-
-const STATUS_LABEL: Record<Employee['status'], string> = {
-  active: '재직',
-  leave: '휴직',
-  inactive: '퇴직'
-};
-
-const DEPT_LABEL: Record<string, string> = {
-  root: '전체',
-  dev: '개발본부',
-  frontend: '프론트엔드팀',
-  backend: '백엔드팀',
-  devops: 'DevOps팀',
-  plan: '기획본부',
-  product: '제품기획팀',
-  ux: 'UX팀',
-  mgmt: '경영지원본부',
-  hr: '인사팀',
-  finance: '재무팀'
-};
-
-const columnDefs: ColDef<Employee>[] = [
+const COLUMN_DEFS: ColDef<GridItemDto>[] = [
   {
     headerName: 'No',
-    valueGetter: params => (params.node?.rowIndex ?? 0) + 1,
+    valueGetter: p => (p.node?.rowIndex ?? 0) + 1,
     width: 65,
     sortable: false,
     filter: false,
     pinned: 'left'
   },
-  {
-    field: 'name',
-    headerName: '이름',
-    width: 100,
-    filter: 'agTextColumnFilter'
-  },
-  {
-    field: 'department',
-    headerName: '소속',
-    width: 140,
-    filter: 'agTextColumnFilter'
-  },
-  {
-    field: 'position',
-    headerName: '직급',
-    width: 130,
-    filter: 'agTextColumnFilter'
-  },
-  {
-    field: 'project',
-    headerName: '담당 프로젝트',
-    flex: 1,
-    filter: 'agTextColumnFilter'
-  },
-  {
-    field: 'email',
-    headerName: '이메일',
-    flex: 1,
-    filter: 'agTextColumnFilter'
-  },
-  {
-    field: 'joinDate',
-    headerName: '입사일',
-    width: 110,
-    filter: 'agDateColumnFilter'
-  },
-  {
-    field: 'status',
-    headerName: '상태',
-    width: 90,
-    filter: 'agTextColumnFilter',
-    cellRenderer: (params: { value: Employee['status'] }) => {
-      if (!params.value) return null;
-      const color = STATUS_COLOR[params.value];
-      const label = STATUS_LABEL[params.value];
-      return `<span class="emp-status emp-status--${params.value}">${label}</span>`;
-    }
-  }
+  { field: 'id',      headerName: 'ID',      width: 80,  filter: 'agNumberColumnFilter' },
+  { field: 'nodeKey', headerName: 'Node Key', width: 120, filter: 'agTextColumnFilter' },
+  { field: 'col1',    headerName: 'Col1',     flex: 1,    filter: 'agTextColumnFilter' },
+  { field: 'col2',    headerName: 'Col2',     flex: 1,    filter: 'agTextColumnFilter' },
+  { field: 'col3',    headerName: 'Col3',     width: 100, filter: 'agTextColumnFilter' },
+  { field: 'col4',    headerName: 'Col4',     width: 100, filter: 'agTextColumnFilter' },
+  { field: 'col5',    headerName: 'Col5',     width: 100, filter: 'agTextColumnFilter' }
 ];
 
-export default function TreeGridPage() {
-  const [selectedKey, setSelectedKey] = useState<string>('root');
-  const gridRef = useRef<AgGridReact<Employee>>(null);
+const PAGE_SIZE = 10;
 
-  const { data = [], isLoading } = useQuery({
-    queryKey: ['departmentEmployees', selectedKey],
-    queryFn: () => fetchDepartmentEmployees(selectedKey),
+export default function TreeGridPage() {
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(0);
+  const gridRef = useRef<AgGridReact<GridItemDto>>(null);
+
+  // 트리 노드 조회
+  const {
+    data: treeNodes = [],
+    isLoading: treeLoading,
+    error: treeError
+  } = useQuery({
+    queryKey: ['treeNodes'],
+    queryFn: fetchTreeNodes,
+    staleTime: 300_000
+  });
+
+  const treeData = useMemo(() => toAntTreeData(treeNodes), [treeNodes]);
+
+  // 선택된 노드의 그리드 데이터 조회
+  const {
+    data: gridPage,
+    isLoading: gridLoading,
+    isFetching: gridFetching
+  } = useQuery({
+    queryKey: ['gridItems', selectedKey, currentPage],
+    queryFn: () => fetchGridItems({ nodeKey: selectedKey!, page: currentPage, size: PAGE_SIZE }),
+    enabled: !!selectedKey,
     staleTime: 60_000
   });
 
-  const handleSelect: TreeProps['onSelect'] = useCallback(
-    (keys: React.Key[]) => {
-      if (keys.length > 0) {
-        setSelectedKey(String(keys[0]));
-      }
-    },
-    []
-  );
+  const handleSelect: TreeProps['onSelect'] = useCallback((keys: React.Key[]) => {
+    if (keys.length > 0) {
+      setSelectedKey(String(keys[0]));
+      setCurrentPage(0);
+    }
+  }, []);
 
   const handleGridReady = useCallback((e: GridReadyEvent) => {
     e.api.sizeColumnsToFit();
   }, []);
 
+  const gridRows = gridPage?.content ?? [];
+  const totalElements = gridPage?.totalElements ?? 0;
+  const totalPages = gridPage?.totalPages ?? 0;
+
   return (
     <div className="tree-grid-page">
-      <Title level={4} style={{ marginBottom: 16 }}>부서별 직원 조회</Title>
+      <Title level={4} style={{ marginBottom: 16 }}>트리 + 그리드</Title>
 
       <div className="tree-grid-layout">
-        {/* Left: Tree Panel */}
-        <Card
-          title="조직도"
-          size="small"
-          className="tree-panel"
-        >
-          <Tree
-            treeData={TREE_DATA}
-            defaultExpandAll
-            selectedKeys={[selectedKey]}
-            onSelect={handleSelect}
-            blockNode
-            className="dept-tree"
-          />
+        {/* 좌측: 트리 패널 */}
+        <Card title="트리" size="small" className="tree-panel">
+          {treeError && <Alert type="error" message="트리 데이터 조회 실패" showIcon />}
+          {treeLoading ? (
+            <Spin style={{ display: 'block', marginTop: 24 }} />
+          ) : (
+            <Tree
+              treeData={treeData}
+              defaultExpandAll
+              selectedKeys={selectedKey ? [selectedKey] : []}
+              onSelect={handleSelect}
+              blockNode
+              className="node-tree"
+            />
+          )}
         </Card>
 
-        {/* Right: Grid Panel */}
+        {/* 우측: 그리드 패널 */}
         <Card
           size="small"
           className="grid-panel"
           title={
             <Space>
-              <span>{DEPT_LABEL[selectedKey] ?? selectedKey}</span>
-              {!isLoading && (
-                <Tag color="blue">{data.length}명</Tag>
+              <span>{selectedKey ? `[${selectedKey}] 데이터` : '노드를 선택하세요'}</span>
+              {selectedKey && !gridLoading && (
+                <Tag color="blue">총 {totalElements}건</Tag>
               )}
+              {gridFetching && <Spin size="small" />}
             </Space>
           }
         >
-          {isLoading ? (
-            <div className="grid-loading">
-              <Spin tip="조회 중..." />
+          {!selectedKey ? (
+            <div className="grid-empty">
+              <span>좌측 트리에서 노드를 클릭하면 데이터가 조회됩니다.</span>
             </div>
           ) : (
-            <div className="ag-theme-quartz treegrid-grid">
-              <AgGridReact<Employee>
-                ref={gridRef}
-                rowData={data}
-                columnDefs={columnDefs}
-                defaultColDef={{
-                  sortable: true,
-                  resizable: true,
-                  filter: true
-                }}
-                rowSelection={{ mode: 'singleRow' }}
-                pagination
-                paginationPageSize={15}
-                paginationPageSizeSelector={[10, 15, 30, 50]}
-                onGridReady={handleGridReady}
-                overlayNoRowsTemplate="<span style='color:#999'>해당 부서에 직원이 없습니다</span>"
-              />
-            </div>
+            <>
+              <div className="ag-theme-quartz treegrid-grid">
+                <AgGridReact<GridItemDto>
+                  ref={gridRef}
+                  rowData={gridLoading ? undefined : gridRows}
+                  loading={gridLoading}
+                  columnDefs={COLUMN_DEFS}
+                  defaultColDef={{ sortable: true, resizable: true }}
+                  rowSelection={{ mode: 'singleRow' }}
+                  onGridReady={handleGridReady}
+                  overlayNoRowsTemplate="<span style='color:#999'>해당 노드의 데이터가 없습니다</span>"
+                />
+              </div>
+              {/* 서버 사이드 페이지네이션 */}
+              {totalPages > 1 && (
+                <div className="grid-pagination">
+                  <button
+                    className="pg-btn"
+                    disabled={currentPage === 0}
+                    onClick={() => setCurrentPage(p => p - 1)}
+                  >
+                    이전
+                  </button>
+                  <span className="pg-info">
+                    {currentPage + 1} / {totalPages}
+                  </span>
+                  <button
+                    className="pg-btn"
+                    disabled={currentPage >= totalPages - 1}
+                    onClick={() => setCurrentPage(p => p + 1)}
+                  >
+                    다음
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </Card>
       </div>
