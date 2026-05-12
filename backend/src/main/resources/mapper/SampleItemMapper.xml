@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.sample.sample.mapper.SampleItemMapper">
+    <resultMap id="SampleItemResultMap" type="com.example.sample.sample.domain.SampleItem">
+        <id property="id" column="ID"/>
+        <result property="title" column="TITLE"/>
+        <result property="description" column="DESCRIPTION"/>
+        <result property="status" column="STATUS"/>
+        <result property="createdAt" column="CREATED_AT"/>
+        <result property="updatedAt" column="UPDATED_AT"/>
+    </resultMap>
+
+    <select id="findAll" resultMap="SampleItemResultMap">
+        SELECT ID, TITLE, DESCRIPTION, STATUS, CREATED_AT, UPDATED_AT
+        FROM SAMPLE_ITEM
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    LOWER(TITLE) LIKE '%' || LOWER(#{keyword}) || '%'
+                    OR LOWER(DESCRIPTION) LIKE '%' || LOWER(#{keyword}) || '%'
+                )
+            </if>
+        </where>
+        ORDER BY ID DESC
+    </select>
+
+    <select id="findById" resultMap="SampleItemResultMap">
+        SELECT ID, TITLE, DESCRIPTION, STATUS, CREATED_AT, UPDATED_AT
+        FROM SAMPLE_ITEM
+        WHERE ID = #{id}
+    </select>
+
+    <insert id="insert" parameterType="com.example.sample.sample.domain.SampleItem">
+        <selectKey keyProperty="id" resultType="long" order="BEFORE">
+            SELECT SAMPLE_ITEM_SEQ.NEXTVAL FROM DUAL
+        </selectKey>
+        INSERT INTO SAMPLE_ITEM (ID, TITLE, DESCRIPTION, STATUS, CREATED_AT, UPDATED_AT)
+        VALUES (#{id}, #{title}, #{description}, #{status}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    </insert>
+
+    <update id="update" parameterType="com.example.sample.sample.domain.SampleItem">
+        UPDATE SAMPLE_ITEM
+        SET TITLE = #{title},
+            DESCRIPTION = #{description},
+            STATUS = #{status},
+            UPDATED_AT = CURRENT_TIMESTAMP
+        WHERE ID = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM SAMPLE_ITEM
+        WHERE ID = #{id}
+    </delete>
+</mapper>
