@@ -1,12 +1,14 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { ConfigProvider, App as AntdApp } from 'antd';
+import { App as AntdApp, ConfigProvider } from 'antd';
 import koKR from 'antd/locale/ko_KR';
-import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import AppRoutes from './routes/AppRoutes';
+import { BrowserRouter } from 'react-router-dom';
+import AppRoutes from './routes/AppRoutes.jsx';
 import './index.css';
 
+// React Query 기본값은 화면 전체에서 공유된다.
+// retry를 1회만 허용해서 개발 중 API 장애를 빠르게 확인할 수 있게 했다.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -16,7 +18,7 @@ const queryClient = new QueryClient({
   }
 });
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ConfigProvider
       locale={koKR}

@@ -1,6 +1,6 @@
-import { GridItemDto, PageResponse, TreeNodeDto } from '../common/types';
-
-export const mockTreeNodes: TreeNodeDto[] = [
+// 트리+그리드 화면은 백엔드/Oracle 없이도 검토 가능해야 한다.
+// 그래서 실제 API DTO와 같은 필드명으로 mock 데이터를 둔다.
+export const mockTreeNodes = [
   {
     id: 1,
     nodeKey: 'aaa',
@@ -120,7 +120,7 @@ export const mockTreeNodes: TreeNodeDto[] = [
 
 const gridNodeKeys = ['aaa-1-1', 'aaa-1-2', 'aaa-2-1', 'bbb-1-1', 'ccc-2-1'];
 
-export const mockGridItems: GridItemDto[] = gridNodeKeys.flatMap((nodeKey, nodeIndex) =>
+export const mockGridItems = gridNodeKeys.flatMap((nodeKey, nodeIndex) =>
   Array.from({ length: nodeIndex === 3 ? 12 : 8 }, (_, index) => {
     const sequence = String(index + 1).padStart(3, '0');
 
@@ -138,12 +138,7 @@ export const mockGridItems: GridItemDto[] = gridNodeKeys.flatMap((nodeKey, nodeI
   })
 );
 
-export function getMockGridPage(params: {
-  nodeKey?: string;
-  col1?: string;
-  page?: number;
-  size?: number;
-}): PageResponse<GridItemDto> {
+export function getMockGridPage(params = {}) {
   const page = params.page ?? 0;
   const size = params.size ?? 10;
   const filtered = mockGridItems.filter(item => {
@@ -152,16 +147,17 @@ export function getMockGridPage(params: {
     return matchesNode && matchesCol1;
   });
   const content = filtered.slice(page * size, page * size + size);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / size));
 
   return {
     content,
     totalElements: filtered.length,
-    totalPages: Math.ceil(filtered.length / size),
+    totalPages,
     size,
     number: page,
     numberOfElements: content.length,
     first: page === 0,
-    last: page >= Math.ceil(filtered.length / size) - 1,
+    last: page >= totalPages - 1,
     empty: content.length === 0
   };
 }

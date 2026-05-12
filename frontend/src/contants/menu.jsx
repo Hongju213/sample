@@ -1,15 +1,17 @@
+import React from 'react';
 import {
+  ApartmentOutlined,
   AppstoreOutlined,
   HomeOutlined,
   SettingOutlined,
-  ToolOutlined,
   TableOutlined,
-  ApartmentOutlined
+  ToolOutlined
 } from '@ant-design/icons';
-import { MenuProps } from 'antd';
 import { Link } from 'react-router-dom';
 
-export const menuItems: MenuProps['items'] = [
+// Ant Design Menu가 요구하는 item 배열이다.
+// 라우터 경로를 key로 사용하면 현재 URL과 selectedKeys를 바로 비교할 수 있다.
+export const menuItems = [
   {
     key: '/',
     icon: <HomeOutlined />,

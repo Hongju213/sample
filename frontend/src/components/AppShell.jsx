@@ -1,14 +1,14 @@
+import React from 'react';
 import { GithubOutlined, KeyOutlined } from '@ant-design/icons';
 import { Button, Form, Input, Layout, Menu, Space, Typography } from 'antd';
-import { PropsWithChildren } from 'react';
 import { useLocation } from 'react-router-dom';
-import { menuItems } from '../contants/menu';
-import { useAuthStore } from '../store/authStore';
+import { menuItems } from '../contants/menu.jsx';
+import { useAuthStore } from '../store/authStore.js';
 import './AppShell.css';
 
 const { Header, Sider, Content } = Layout;
 
-export function AppShell({ children }: PropsWithChildren) {
+export function AppShell({ children }) {
   const location = useLocation();
   const { username, password, setCredentials } = useAuthStore();
   const [form] = Form.useForm();
@@ -28,6 +28,7 @@ export function AppShell({ children }: PropsWithChildren) {
           className="app-menu"
         />
       </Sider>
+
       <Layout>
         <Header className="app-header">
           <Typography.Text strong>Java 21 + React 18 + Oracle + MyBatis</Typography.Text>
@@ -35,7 +36,7 @@ export function AppShell({ children }: PropsWithChildren) {
             form={form}
             layout="inline"
             initialValues={{ username, password }}
-            onFinish={(values) => setCredentials(values.username, values.password)}
+            onFinish={values => setCredentials(values.username, values.password)}
             className="app-auth-form"
           >
             <Form.Item name="username" className="app-auth-field">
@@ -48,10 +49,15 @@ export function AppShell({ children }: PropsWithChildren) {
               <Button type="primary" htmlType="submit">
                 인증 저장
               </Button>
-              <Button icon={<GithubOutlined />} href="https://github.com/Hongju213/sample" target="_blank" />
+              <Button
+                icon={<GithubOutlined />}
+                href="https://github.com/Hongju213/sample"
+                target="_blank"
+              />
             </Space>
           </Form>
         </Header>
+
         <Content className="app-content">{children}</Content>
       </Layout>
     </Layout>

@@ -1,3 +1,4 @@
+import React from 'react';
 import { ApiOutlined, DatabaseOutlined, DesktopOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { Card, Col, Descriptions, Row, Statistic, Steps, Tag, Typography } from 'antd';
 import './HomePage.css';
@@ -6,9 +7,10 @@ export default function HomePage() {
   return (
     <>
       <div className="page-title">
-        <h1>프로젝트 템플릿</h1>
-        <p>내부망에서 바로 복제해 기본 업무 화면과 API를 붙여 나가는 샘플입니다.</p>
+        <h1>프로젝트 샘플</h1>
+        <p>Spring Boot, Oracle, React 화면을 빠르게 확인하기 위한 기준 프로젝트입니다.</p>
       </div>
+
       <Row gutter={[16, 16]}>
         <Col xs={24} md={12} xl={6}>
           <Card>
@@ -27,7 +29,7 @@ export default function HomePage() {
         </Col>
         <Col xs={24} md={12} xl={6}>
           <Card>
-            <Statistic title="Oracle" value="XE Dev" prefix={<DatabaseOutlined />} />
+            <Statistic title="Oracle" value="19c / XE" prefix={<DatabaseOutlined />} />
           </Card>
         </Col>
       </Row>
@@ -55,7 +57,7 @@ export default function HomePage() {
               </Descriptions.Item>
             </Descriptions>
             <Typography.Paragraph className="home-note">
-              `/sample` 화면에서 CRUD API와 Ant Design 컴포넌트 샘플을 함께 확인할 수 있습니다.
+              API 서버가 없을 때도 주요 화면은 mock 데이터로 확인할 수 있습니다.
             </Typography.Paragraph>
           </Card>
         </Col>

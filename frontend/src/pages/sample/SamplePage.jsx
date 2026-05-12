@@ -1,3 +1,4 @@
+import React from 'react';
 import {
   DeleteOutlined,
   EditOutlined,
@@ -15,9 +16,7 @@ import {
   Card,
   Checkbox,
   Col,
-  Collapse,
   DatePicker,
-  Divider,
   Drawer,
   Dropdown,
   Form,
@@ -47,7 +46,6 @@ import {
   Typography,
   Upload
 } from 'antd';
-import type { TableProps } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import {
   createSampleItem,
@@ -55,35 +53,29 @@ import {
   fetchCurrentUser,
   fetchSampleItems,
   updateSampleItem
-} from '../../apis/sampleItemApi';
-import { SampleItemDto as SampleItem, SampleItemSavePayload as SampleItemPayload, SampleItemStatus } from '../../common/types';
-import { transferItems, treeData } from '../../dev/sampleData';
-import { formatDateTime, statusColor } from '../../utils/format';
+} from '../../apis/sampleItemApi.js';
+import { transferItems, treeData } from '../../dev/sampleData.js';
+import { formatDateTime, statusColor, statusOptions } from '../../utils/format.js';
 import './SamplePage.css';
-
-const statusOptions: { label: string; value: SampleItemStatus }[] = [
-  { label: '대기', value: 'TODO' },
-  { label: '진행', value: 'DOING' },
-  { label: '완료', value: 'DONE' }
-];
 
 export default function SamplePage() {
   const { message, modal } = App.useApp();
-  const [form] = Form.useForm<SampleItemPayload>();
-  const [items, setItems] = useState<SampleItem[]>([]);
+  const [form] = Form.useForm();
+  const [items, setItems] = useState([]);
   const [keyword, setKeyword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [editing, setEditing] = useState<SampleItem | null>(null);
+  const [editing, setEditing] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [targetKeys, setTargetKeys] = useState<string[]>(['1', '3']);
+  const [targetKeys, setTargetKeys] = useState(['1', '3']);
 
+  // API가 살아 있으면 서버 데이터를, 아니면 sampleItemApi의 local mock 데이터를 사용한다.
   const loadItems = async (nextKeyword = keyword) => {
     setLoading(true);
     try {
       const page = await fetchSampleItems({ keyword: nextKeyword || undefined });
       setItems(page.content);
-    } catch (error) {
-      message.error('API 호출에 실패했습니다. 백엔드와 인증 정보를 확인하세요.');
+    } catch {
+      message.error('목록을 불러오지 못했습니다.');
     } finally {
       setLoading(false);
     }
@@ -93,7 +85,7 @@ export default function SamplePage() {
     loadItems('');
   }, []);
 
-  const columns = useMemo<TableProps<SampleItem>['columns']>(
+  const columns = useMemo(
     () => [
       { title: 'ID', dataIndex: 'id', width: 80 },
       { title: '제목', dataIndex: 'title' },
@@ -101,7 +93,7 @@ export default function SamplePage() {
         title: '상태',
         dataIndex: 'status',
         width: 110,
-        render: (status: SampleItemStatus) => <Tag color={statusColor(status)}>{status}</Tag>
+        render: status => <Tag color={statusColor(status)}>{status}</Tag>
       },
       {
         title: '수정일',
@@ -137,29 +129,30 @@ export default function SamplePage() {
     [form]
   );
 
-  const handleSubmit = async (values: SampleItemPayload) => {
+  const handleSubmit = async values => {
     try {
       if (editing) {
         await updateSampleItem(editing.id, values);
-        message.success('수정되었습니다.');
+        message.success('수정했습니다.');
       } else {
         await createSampleItem(values);
-        message.success('등록되었습니다.');
+        message.success('등록했습니다.');
       }
+
       form.resetFields();
       setEditing(null);
       await loadItems();
-    } catch (error) {
+    } catch {
       message.error('저장에 실패했습니다.');
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async id => {
     try {
       await deleteSampleItem(id);
-      message.success('삭제되었습니다.');
+      message.success('삭제했습니다.');
       await loadItems();
-    } catch (error) {
+    } catch {
       message.error('삭제에 실패했습니다.');
     }
   };
@@ -167,9 +160,9 @@ export default function SamplePage() {
   const testAuth = async () => {
     try {
       const user = await fetchCurrentUser();
-      modal.success({ title: 'API 인증 성공', content: `${user.username} 계정으로 호출되었습니다.` });
-    } catch (error) {
-      modal.error({ title: 'API 인증 실패', content: '상단의 인증 정보를 확인하세요.' });
+      modal.success({ title: 'API 인증 성공', content: `${user.username} 계정으로 호출했습니다.` });
+    } catch {
+      modal.error({ title: 'API 인증 실패', content: '상단 인증 정보를 확인하세요.' });
     }
   };
 
@@ -177,7 +170,7 @@ export default function SamplePage() {
     <>
       <div className="page-title">
         <h1>CRUD 및 Ant Design 샘플</h1>
-        <p>실제 업무 화면을 만들 때 복사해서 시작하기 좋은 컴포넌트 예시입니다.</p>
+        <p>업무 화면에서 자주 쓰는 입력, 표, 피드백 컴포넌트를 한 번에 확인합니다.</p>
       </div>
 
       <Row gutter={[16, 16]}>
@@ -230,8 +223,8 @@ export default function SamplePage() {
                   allowClear
                   placeholder="검색"
                   value={keyword}
-                  onChange={(event) => setKeyword(event.target.value)}
-                  onSearch={(value) => loadItems(value)}
+                  onChange={event => setKeyword(event.target.value)}
+                  onSearch={value => loadItems(value)}
                   className="sample-search"
                 />
                 <Button icon={<ReloadOutlined />} onClick={() => loadItems()} />
@@ -244,13 +237,11 @@ export default function SamplePage() {
               columns={columns}
               dataSource={items}
               pagination={{ pageSize: 5 }}
-              expandable={{ expandedRowRender: (record) => record.description || '-' }}
+              expandable={{ expandedRowRender: record => record.description || '-' }}
             />
           </Card>
         </Col>
       </Row>
-
-      <Divider />
 
       <div className="sample-grid">
         <Card title="기본 입력">
@@ -285,26 +276,19 @@ export default function SamplePage() {
             <Badge count={5}>
               <Button>알림</Button>
             </Badge>
-            <div className="component-strip">
-              <Tag color="blue">blue</Tag>
-              <Tag color="green">green</Tag>
-              <Tag color="red">red</Tag>
-            </div>
           </Space>
         </Card>
 
         <Card title="오버레이">
           <Space wrap>
-            <Tooltip title="툴팁 메시지">
+            <Tooltip title="도움말 메시지">
               <Button>Tooltip</Button>
             </Tooltip>
             <Dropdown menu={{ items: [{ key: '1', label: '메뉴 1' }, { key: '2', label: '메뉴 2' }] }}>
               <Button icon={<SettingOutlined />}>Dropdown</Button>
             </Dropdown>
             <Button onClick={() => setDrawerOpen(true)}>Drawer</Button>
-            <Button
-              onClick={() => modal.info({ title: 'Modal', content: '업무 확인 창 샘플입니다.' })}
-            >
+            <Button onClick={() => modal.info({ title: 'Modal', content: '업무 확인 창 샘플입니다.' })}>
               Modal
             </Button>
             <Upload beforeUpload={() => false} maxCount={1}>
@@ -328,7 +312,7 @@ export default function SamplePage() {
                   <List
                     size="small"
                     dataSource={['API', 'Mapper', 'Service']}
-                    renderItem={(item) => <List.Item>{item}</List.Item>}
+                    renderItem={item => <List.Item>{item}</List.Item>}
                   />
                 )
               }
@@ -336,17 +320,7 @@ export default function SamplePage() {
           />
         </Card>
 
-        <Card title="구조 컴포넌트">
-          <Collapse
-            defaultActiveKey={['1']}
-            items={[
-              {
-                key: '1',
-                label: 'Collapse',
-                children: '설정 영역이나 상세 조건을 접고 펼칠 때 사용합니다.'
-              }
-            ]}
-          />
+        <Card title="흐름 표시">
           <Timeline
             className="sample-timeline"
             items={[
@@ -359,12 +333,11 @@ export default function SamplePage() {
 
         <Card title="Tree / Transfer">
           <Tree treeData={treeData} defaultExpandAll />
-          <Divider />
           <Transfer
             dataSource={transferItems}
             targetKeys={targetKeys}
-            onChange={(nextKeys) => setTargetKeys(nextKeys as string[])}
-            render={(item) => item.title}
+            onChange={nextKeys => setTargetKeys(nextKeys)}
+            render={item => item.title}
             className="sample-transfer"
           />
         </Card>
@@ -386,7 +359,7 @@ export default function SamplePage() {
 
       <Drawer title="Drawer 샘플" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
         <Typography.Paragraph>
-          상세 정보, 필터, 보조 작업을 오른쪽 패널에서 처리할 때 사용합니다.
+          상세 정보, 필터, 보조 작업은 오른쪽 패널에서 처리할 수 있습니다.
         </Typography.Paragraph>
       </Drawer>
     </>
