@@ -1,30 +1,29 @@
-import { getMockGridPage, mockTreeNodes } from '../dev/treeGridMockData.js';
-import { http } from './http.js';
-
-const useMockTreeGridApi = import.meta.env.DEV && !import.meta.env.VITE_API_BASE_URL;
+import testData from '../dev/testData.json';
 
 export async function fetchTreeNodes() {
-  if (useMockTreeGridApi) {
-    return mockTreeNodes;
-  }
-
-  try {
-    const { data } = await http.get('/api/tree-nodes');
-    return data;
-  } catch {
-    return mockTreeNodes;
-  }
+  return testData.treeNodes;
 }
 
 export async function fetchGridItems(params = {}) {
-  if (useMockTreeGridApi) {
-    return getMockGridPage(params);
-  }
+  const page = params.page ?? 0;
+  const size = params.size ?? 10;
+  const filtered = testData.gridItems.filter(item => {
+    const matchesNode = params.nodeKey ? item.nodeKey === params.nodeKey : true;
+    const matchesCol1 = params.col1 ? item.col1.includes(params.col1) : true;
+    return matchesNode && matchesCol1;
+  });
+  const content = filtered.slice(page * size, page * size + size);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / size));
 
-  try {
-    const { data } = await http.get('/api/grid-items', { params });
-    return data;
-  } catch {
-    return getMockGridPage(params);
-  }
+  return {
+    content,
+    totalElements: filtered.length,
+    totalPages,
+    size,
+    number: page,
+    numberOfElements: content.length,
+    first: page === 0,
+    last: page >= totalPages - 1,
+    empty: content.length === 0
+  };
 }

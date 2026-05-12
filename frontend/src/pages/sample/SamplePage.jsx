@@ -54,7 +54,7 @@ import {
   fetchSampleItems,
   updateSampleItem
 } from '../../apis/sampleItemApi.js';
-import { transferItems, treeData } from '../../dev/sampleData.js';
+import testData from '../../dev/testData.json';
 import { formatDateTime, statusColor, statusOptions } from '../../utils/format.js';
 import './SamplePage.css';
 
@@ -68,7 +68,10 @@ export default function SamplePage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [targetKeys, setTargetKeys] = useState(['1', '3']);
 
-  // API가 살아 있으면 서버 데이터를, 아니면 sampleItemApi의 local mock 데이터를 사용한다.
+  // 보조 컴포넌트 샘플도 같은 JSON 파일에서 읽는다.
+  const treeData = testData.componentTree;
+  const transferItems = testData.transferItems;
+
   const loadItems = async (nextKeyword = keyword) => {
     setLoading(true);
     try {
@@ -157,20 +160,16 @@ export default function SamplePage() {
     }
   };
 
-  const testAuth = async () => {
-    try {
-      const user = await fetchCurrentUser();
-      modal.success({ title: 'API 인증 성공', content: `${user.username} 계정으로 호출했습니다.` });
-    } catch {
-      modal.error({ title: 'API 인증 실패', content: '상단 인증 정보를 확인하세요.' });
-    }
+  const showCurrentUser = async () => {
+    const user = await fetchCurrentUser();
+    modal.success({ title: 'JSON 사용자 확인', content: `${user.username} 사용자 데이터입니다.` });
   };
 
   return (
     <>
       <div className="page-title">
         <h1>CRUD 및 Ant Design 샘플</h1>
-        <p>업무 화면에서 자주 쓰는 입력, 표, 피드백 컴포넌트를 한 번에 확인합니다.</p>
+        <p>업무 화면에서 자주 쓰는 입력, 표, 피드백 컴포넌트를 JSON 데이터로 확인합니다.</p>
       </div>
 
       <Row gutter={[16, 16]}>
@@ -189,12 +188,7 @@ export default function SamplePage() {
               </Button>
             }
           >
-            <Form
-              form={form}
-              layout="vertical"
-              initialValues={{ status: 'TODO' }}
-              onFinish={handleSubmit}
-            >
+            <Form form={form} layout="vertical" initialValues={{ status: 'TODO' }} onFinish={handleSubmit}>
               <Form.Item name="title" label="제목" rules={[{ required: true, message: '제목을 입력하세요.' }]}>
                 <Input placeholder="샘플 항목 제목" />
               </Form.Item>
@@ -208,7 +202,7 @@ export default function SamplePage() {
                 <Button type="primary" htmlType="submit">
                   저장
                 </Button>
-                <Button onClick={testAuth}>API 인증 테스트</Button>
+                <Button onClick={showCurrentUser}>JSON 사용자 확인</Button>
               </Space>
             </Form>
           </Card>
@@ -311,7 +305,7 @@ export default function SamplePage() {
                 children: (
                   <List
                     size="small"
-                    dataSource={['API', 'Mapper', 'Service']}
+                    dataSource={['JSON', 'Mapper', 'Service']}
                     renderItem={item => <List.Item>{item}</List.Item>}
                   />
                 )

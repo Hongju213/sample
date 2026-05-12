@@ -8,7 +8,7 @@ import AppRoutes from './routes/AppRoutes.jsx';
 import './index.css';
 
 // React Query 기본값은 화면 전체에서 공유된다.
-// retry를 1회만 허용해서 개발 중 API 장애를 빠르게 확인할 수 있게 했다.
+// 지금은 JSON 데이터를 읽지만, 화면의 loading/data 흐름을 실제 조회 화면처럼 유지한다.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

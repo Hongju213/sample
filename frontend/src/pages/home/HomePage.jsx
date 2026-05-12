@@ -51,13 +51,13 @@ export default function HomePage() {
           <Card title="기본 설정">
             <Descriptions column={1} size="small">
               <Descriptions.Item label="DB 계정">root / root</Descriptions.Item>
-              <Descriptions.Item label="API 인증">root / root</Descriptions.Item>
+              <Descriptions.Item label="샘플 사용자">root / root</Descriptions.Item>
               <Descriptions.Item label="상태">
                 <Tag color="green">READY</Tag>
               </Descriptions.Item>
             </Descriptions>
             <Typography.Paragraph className="home-note">
-              API 서버가 없을 때도 주요 화면은 mock 데이터로 확인할 수 있습니다.
+              주요 화면은 src/dev/testData.json 데이터만 사용합니다.
             </Typography.Paragraph>
           </Card>
         </Col>
