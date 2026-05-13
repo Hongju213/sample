@@ -2,39 +2,55 @@ import React from 'react';
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { Button, Card, Col, DatePicker, Form, Input, Row, Select, Space, Tag, Typography } from 'antd';
 import { useQuery } from '@tanstack/react-query';
-import { AgGridReact } from 'ag-grid-react';
-import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community';
-import dayjs from 'dayjs';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Grid from '../../components/Grid.jsx';
 import { fetchSampleItems } from '../../apis/sampleItemApi.js';
-import { statusLabels } from '../../utils/format.js';
+import { formatDateTime, statusLabels, statusOptions } from '../../utils/format.js';
 import './TemplatePage.css';
-
-ModuleRegistry.registerModules([AllCommunityModule]);
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
-const PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 20;
 
 export default function TemplatePage() {
   const [form] = Form.useForm();
-  const [searchParams, setSearchParams] = useState({ page: 0, size: PAGE_SIZE });
   const gridRef = useRef(null);
+  const [queryParams, setQueryParams] = useState({ page: 1, size: DEFAULT_PAGE_SIZE });
+  const [list, setList] = useState({
+    content: [],
+    currentPage: 1,
+    pages: 0,
+    totalCount: 0,
+    pageSize: DEFAULT_PAGE_SIZE
+  });
 
-  const { data: pageData, isLoading, isFetching } = useQuery({
-    queryKey: ['sampleItems', searchParams],
-    queryFn: () => fetchSampleItems(searchParams),
+  const {
+    data: gridData,
+    isLoading: isGridLoading,
+    isFetching: isGridFetching,
+    error: isGridError
+  } = useQuery({
+    queryKey: ['templateSampleItems', queryParams],
+    queryFn: () => fetchSampleItems({ ...queryParams, page: queryParams.page - 1 }),
     staleTime: 30_000
   });
 
-  const rows = pageData?.content ?? [];
-  const totalElements = pageData?.totalElements ?? 0;
-  const totalPages = pageData?.totalPages ?? 0;
-  const currentPage = pageData?.number ?? 0;
+  useEffect(() => {
+    if (!gridData) {
+      return;
+    }
 
-  // columnDefs는 값이 바뀌지 않으므로 memo로 고정한다.
-  // 렌더 때마다 새 배열이 만들어지면 AG Grid가 불필요하게 컬럼 상태를 다시 계산한다.
-  const columnDefs = useMemo(
+    setList(prev => ({
+      ...prev,
+      content: gridData.content || [],
+      currentPage: (gridData.number ?? 0) + 1,
+      pages: gridData.totalPages || 0,
+      totalCount: gridData.totalElements || 0,
+      pageSize: gridData.size || DEFAULT_PAGE_SIZE
+    }));
+  }, [gridData]);
+
+  const gridColumnDefs = useMemo(
     () => [
       {
         headerName: 'No',
@@ -59,21 +75,19 @@ export default function TemplatePage() {
         width: 110,
         filter: 'agTextColumnFilter',
         cellRenderer: params =>
-          params.value
-            ? `<span class="status-tag status-${params.value.toLowerCase()}">${statusLabels[params.value]}</span>`
-            : ''
+          params.value ? `<span class="status-tag status-${params.value.toLowerCase()}">${statusLabels[params.value]}</span>` : ''
       },
       {
         field: 'createdAt',
         headerName: '생성일',
         width: 150,
-        valueFormatter: params => (params.value ? dayjs(params.value).format('YYYY-MM-DD HH:mm') : '-')
+        valueFormatter: params => formatDateTime(params.value)
       },
       {
         field: 'updatedAt',
         headerName: '수정일',
         width: 150,
-        valueFormatter: params => (params.value ? dayjs(params.value).format('YYYY-MM-DD HH:mm') : '-')
+        valueFormatter: params => formatDateTime(params.value)
       }
     ],
     []
@@ -81,25 +95,25 @@ export default function TemplatePage() {
 
   const handleSearch = useCallback(() => {
     const values = form.getFieldsValue();
-    setSearchParams({
+    setQueryParams(prev => ({
+      ...prev,
       keyword: values.keyword || undefined,
       status: values.status || undefined,
-      page: 0,
-      size: PAGE_SIZE
-    });
+      page: 1
+    }));
   }, [form]);
 
   const handleReset = useCallback(() => {
     form.resetFields();
-    setSearchParams({ page: 0, size: PAGE_SIZE });
+    setQueryParams({ page: 1, size: DEFAULT_PAGE_SIZE });
   }, [form]);
 
-  const handlePageChange = useCallback(page => {
-    setSearchParams(prev => ({ ...prev, page }));
-  }, []);
-
-  const handleGridReady = useCallback(event => {
-    event.api.sizeColumnsToFit();
+  const handleChangePaging = useCallback(next => {
+    setQueryParams(prev => ({
+      ...prev,
+      page: next.page ?? 1,
+      size: next.size ?? prev.size
+    }));
   }, []);
 
   const handleExportCsv = useCallback(() => {
@@ -127,16 +141,7 @@ export default function TemplatePage() {
             </Col>
             <Col>
               <Form.Item name="status" label="상태" className="search-item">
-                <Select
-                  placeholder="전체"
-                  allowClear
-                  className="template-status"
-                  options={[
-                    { value: 'TODO', label: '대기' },
-                    { value: 'DOING', label: '진행' },
-                    { value: 'DONE', label: '완료' }
-                  ]}
-                />
+                <Select placeholder="전체" allowClear className="template-status" options={statusOptions} />
               </Form.Item>
             </Col>
             <Col>
@@ -146,8 +151,8 @@ export default function TemplatePage() {
             </Col>
             <Col flex="auto">
               <Space>
-                <Button type="primary" icon={<SearchOutlined />} htmlType="submit" loading={isFetching}>
-                  검색
+                <Button type="primary" icon={<SearchOutlined />} htmlType="submit" loading={isGridFetching}>
+                  조회
                 </Button>
                 <Button icon={<ReloadOutlined />} onClick={handleReset}>
                   초기화
@@ -164,8 +169,8 @@ export default function TemplatePage() {
         title={
           <Space>
             <span>조회 결과</span>
-            <Tag color="blue">총 {totalElements}건</Tag>
-            {totalPages > 1 && <Tag>{currentPage + 1} / {totalPages} 페이지</Tag>}
+            <Tag color="blue">총 {list.totalCount}건</Tag>
+            {list.pages > 1 && <Tag>{list.currentPage} / {list.pages} 페이지</Tag>}
           </Space>
         }
         extra={
@@ -174,42 +179,19 @@ export default function TemplatePage() {
           </Button>
         }
       >
-        <div className="template-grid">
-          <AgGridReact
-            ref={gridRef}
-            rowData={rows}
-            loading={isLoading && rows.length === 0}
-            columnDefs={columnDefs}
-            defaultColDef={{ sortable: true, resizable: true, filter: true }}
-            rowSelection={{ mode: 'singleRow' }}
-            onGridReady={handleGridReady}
-            overlayNoRowsTemplate="<span style='color:#999'>데이터가 없습니다.</span>"
-          />
-        </div>
-
-        {totalPages > 1 && (
-          <div className="template-pagination">
-            <button className="pg-btn" disabled={currentPage === 0} onClick={() => handlePageChange(currentPage - 1)}>
-              이전
-            </button>
-            {Array.from({ length: Math.min(totalPages, 10) }, (_, index) => index).map(page => (
-              <button
-                key={page}
-                className={`pg-btn${page === currentPage ? ' pg-btn--active' : ''}`}
-                onClick={() => handlePageChange(page)}
-              >
-                {page + 1}
-              </button>
-            ))}
-            <button
-              className="pg-btn"
-              disabled={currentPage >= totalPages - 1}
-              onClick={() => handlePageChange(currentPage + 1)}
-            >
-              다음
-            </button>
-          </div>
-        )}
+        <Grid
+          ref={gridRef}
+          list={list.content}
+          columnDefs={gridColumnDefs}
+          loading={(isGridLoading || isGridFetching) && list.content.length === 0}
+          error={isGridError}
+          currentPage={list.currentPage}
+          pages={list.pages}
+          totalCount={list.totalCount}
+          pageSize={list.pageSize}
+          onChangePageSize={size => handleChangePaging({ size })}
+          onChangeCurrentPage={page => handleChangePaging({ page })}
+        />
       </Card>
     </div>
   );

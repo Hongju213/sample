@@ -1,0 +1,51 @@
+.common-grid {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  gap: 8px;
+}
+
+.common-grid__body {
+  position: relative;
+  flex: 1;
+  min-height: 360px;
+}
+
+.common-grid__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.common-grid__page-size {
+  width: 96px;
+}
+
+.common-grid__pager {
+  min-height: 24px;
+}
+
+.common-grid__page-info {
+  display: inline-flex;
+  justify-content: center;
+  min-width: 72px;
+}
+
+.common-grid__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(255 255 255 / 72%);
+  z-index: 2;
+}
+
+.common-grid__empty-text {
+  color: #8c8c8c;
+}

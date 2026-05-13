@@ -1,361 +1,361 @@
 import React from 'react';
-import {
-  DeleteOutlined,
-  EditOutlined,
-  ExperimentOutlined,
-  PlusOutlined,
-  ReloadOutlined,
-  SettingOutlined,
-  UploadOutlined
-} from '@ant-design/icons';
-import {
-  Alert,
-  App,
-  Badge,
-  Button,
-  Card,
-  Checkbox,
-  Col,
-  DatePicker,
-  Drawer,
-  Dropdown,
-  Form,
-  Input,
-  InputNumber,
-  List,
-  Popconfirm,
-  Progress,
-  Radio,
-  Rate,
-  Row,
-  Segmented,
-  Select,
-  Slider,
-  Space,
-  Spin,
-  Statistic,
-  Switch,
-  Table,
-  Tabs,
-  Tag,
-  TimePicker,
-  Timeline,
-  Tooltip,
-  Transfer,
-  Tree,
-  Typography,
-  Upload
-} from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { App, Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Tag, Typography } from 'antd';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Grid from '../../components/Grid.jsx';
 import {
   createSampleItem,
   deleteSampleItem,
-  fetchCurrentUser,
   fetchSampleItems,
   updateSampleItem
 } from '../../apis/sampleItemApi.js';
-import testData from '../../dev/testData.json';
-import { formatDateTime, statusColor, statusOptions } from '../../utils/format.js';
+import { formatDateTime, statusColor, statusLabels, statusOptions } from '../../utils/format.js';
 import './SamplePage.css';
 
-export default function SamplePage() {
-  const { message, modal } = App.useApp();
+const { Title } = Typography;
+const DEFAULT_PAGE_SIZE = 10;
+
+function CodeRenderer(params) {
+  const value = params.value;
+
+  if (!value) {
+    return null;
+  }
+
+  return <Tag color={statusColor(value)}>{statusLabels[value] ?? value}</Tag>;
+}
+
+function SampleSearch({ onSearch, onReset, refreshKey }) {
   const [form] = Form.useForm();
-  const [items, setItems] = useState([]);
-  const [keyword, setKeyword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [targetKeys, setTargetKeys] = useState(['1', '3']);
+  void refreshKey;
 
-  // 보조 컴포넌트 샘플도 같은 JSON 파일에서 읽는다.
-  const treeData = testData.componentTree;
-  const transferItems = testData.transferItems;
-
-  const loadItems = async (nextKeyword = keyword) => {
-    setLoading(true);
-    try {
-      const page = await fetchSampleItems({ keyword: nextKeyword || undefined });
-      setItems(page.content);
-    } catch {
-      message.error('목록을 불러오지 못했습니다.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadItems('');
-  }, []);
-
-  const columns = useMemo(
-    () => [
-      { title: 'ID', dataIndex: 'id', width: 80 },
-      { title: '제목', dataIndex: 'title' },
-      {
-        title: '상태',
-        dataIndex: 'status',
-        width: 110,
-        render: status => <Tag color={statusColor(status)}>{status}</Tag>
-      },
-      {
-        title: '수정일',
-        dataIndex: 'updatedAt',
-        width: 170,
-        render: formatDateTime
-      },
-      {
-        title: '작업',
-        width: 130,
-        render: (_, record) => (
+  return (
+    <Card size="small" className="sample-search-card">
+      <Form form={form} layout="inline" onFinish={onSearch}>
+        <Form.Item name="keyword" label="검색어">
+          <Input
+            allowClear
+            className="sample-keyword"
+            placeholder="제목 / 설명"
+            prefix={<SearchOutlined className="sample-search-icon" />}
+          />
+        </Form.Item>
+        <Form.Item name="status" label="상태">
+          <Select allowClear className="sample-status" placeholder="전체" options={statusOptions} />
+        </Form.Item>
+        <Form.Item>
           <Space>
-            <Tooltip title="수정">
-              <Button
-                icon={<EditOutlined />}
-                onClick={() => {
-                  setEditing(record);
-                  form.setFieldsValue({
-                    title: record.title,
-                    description: record.description,
-                    status: record.status
-                  });
-                }}
-              />
-            </Tooltip>
-            <Popconfirm title="삭제할까요?" onConfirm={() => handleDelete(record.id)}>
-              <Button danger icon={<DeleteOutlined />} />
+            <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
+              조회
+            </Button>
+            <Button icon={<ReloadOutlined />} onClick={() => onReset(form)}>
+              초기화
+            </Button>
+          </Space>
+        </Form.Item>
+      </Form>
+    </Card>
+  );
+}
+
+function SampleGrid({
+  gridRef,
+  list,
+  loading,
+  error,
+  onEditItem,
+  onDeleteItem,
+  onChangePaging,
+  refreshKey
+}) {
+  const gridColumnDefs = useMemo(
+    () => [
+      {
+        headerName: 'No',
+        valueGetter: params => (params.node?.rowIndex ?? 0) + 1,
+        width: 70,
+        pinned: 'left',
+        sortable: false,
+        filter: false
+      },
+      { field: 'id', headerName: 'ID', width: 90, filter: 'agNumberColumnFilter' },
+      { field: 'title', headerName: '제목', flex: 1.4, minWidth: 180, tooltipField: 'title' },
+      {
+        field: 'description',
+        headerName: '설명',
+        flex: 2,
+        minWidth: 220,
+        valueFormatter: params => params.value || '-'
+      },
+      {
+        field: 'status',
+        headerName: '상태',
+        width: 110,
+        cellRenderer: 'codeRenderer'
+      },
+      {
+        field: 'updatedAt',
+        headerName: '수정일',
+        width: 160,
+        valueFormatter: params => formatDateTime(params.value)
+      },
+      {
+        headerName: '작업',
+        width: 132,
+        sortable: false,
+        filter: false,
+        cellRenderer: params => (
+          <Space size={4}>
+            <Button size="small" icon={<EditOutlined />} onClick={() => onEditItem(params.data, 'edit')} />
+            <Popconfirm title="삭제하시겠습니까?" onConfirm={() => onDeleteItem(params.data.id)}>
+              <Button size="small" danger icon={<DeleteOutlined />} />
             </Popconfirm>
           </Space>
         )
       }
     ],
-    [form]
+    [onDeleteItem, onEditItem]
   );
 
-  const handleSubmit = async values => {
-    try {
-      if (editing) {
-        await updateSampleItem(editing.id, values);
-        message.success('수정했습니다.');
-      } else {
-        await createSampleItem(values);
-        message.success('등록했습니다.');
-      }
+  const handleClickRow = useCallback(event => {
+    event.api.deselectAll();
+    event.node.setSelected(true);
+  }, []);
 
-      form.resetFields();
-      setEditing(null);
-      await loadItems();
-    } catch {
-      message.error('저장에 실패했습니다.');
-    }
-  };
+  const handleDoubleClickedRow = useCallback(
+    event => {
+      onEditItem(event.data, 'edit');
+    },
+    [onEditItem]
+  );
 
-  const handleDelete = async id => {
-    try {
-      await deleteSampleItem(id);
-      message.success('삭제했습니다.');
-      await loadItems();
-    } catch {
-      message.error('삭제에 실패했습니다.');
-    }
-  };
-
-  const showCurrentUser = async () => {
-    const user = await fetchCurrentUser();
-    modal.success({ title: 'JSON 사용자 확인', content: `${user.username} 사용자 데이터입니다.` });
-  };
+  useEffect(() => {
+    gridRef.current?.api?.deselectAll();
+  }, [gridRef, refreshKey]);
 
   return (
-    <>
-      <div className="page-title">
-        <h1>CRUD 및 Ant Design 샘플</h1>
-        <p>업무 화면에서 자주 쓰는 입력, 표, 피드백 컴포넌트를 JSON 데이터로 확인합니다.</p>
+    <Card
+      size="small"
+      className="sample-grid-card"
+      title="조회 결과"
+      extra={
+        <Button size="small" type="primary" icon={<PlusOutlined />} onClick={() => onEditItem(null, 'create')}>
+          신규
+        </Button>
+      }
+    >
+      <Grid
+        ref={gridRef}
+        list={list.content}
+        columnDefs={gridColumnDefs}
+        gridOptions={{ components: { codeRenderer: CodeRenderer } }}
+        loading={loading}
+        error={error}
+        onClicked={handleClickRow}
+        onDoubleClicked={handleDoubleClickedRow}
+        currentPage={list.currentPage}
+        pages={list.pages}
+        totalCount={list.totalCount}
+        pageSize={list.pageSize}
+        onChangePageSize={size => onChangePaging({ size })}
+        onChangeCurrentPage={page => onChangePaging({ page })}
+      />
+    </Card>
+  );
+}
+
+function SampleItemModal({ open, mode, data, confirmLoading, onClose, onSubmit }) {
+  const [form] = Form.useForm();
+  const title = mode === 'create' ? '샘플 등록' : '샘플 수정';
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    form.setFieldsValue({
+      title: data?.title ?? '',
+      description: data?.description ?? '',
+      status: data?.status ?? 'TODO'
+    });
+  }, [data, form, open]);
+
+  return (
+    <Modal
+      open={open}
+      title={title}
+      okText="저장"
+      cancelText="닫기"
+      confirmLoading={confirmLoading}
+      onCancel={onClose}
+      onOk={() => form.submit()}
+      destroyOnClose
+    >
+      <Form form={form} layout="vertical" onFinish={onSubmit} preserve={false}>
+        <Form.Item name="title" label="제목" rules={[{ required: true, message: '제목을 입력하세요.' }]}>
+          <Input placeholder="샘플 제목" />
+        </Form.Item>
+        <Form.Item name="description" label="설명">
+          <Input.TextArea rows={4} placeholder="설명" />
+        </Form.Item>
+        <Form.Item name="status" label="상태" rules={[{ required: true, message: '상태를 선택하세요.' }]}>
+          <Select options={statusOptions} />
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+}
+
+export default function SamplePage(props) {
+  const { message } = App.useApp();
+  const gridRef = useRef(null);
+  const [queryParams, setQueryParams] = useState({
+    page: 1,
+    size: DEFAULT_PAGE_SIZE
+  });
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [itemModalState, setItemModalState] = useState({
+    open: false,
+    mode: 'create',
+    data: null
+  });
+  const [list, setList] = useState({
+    content: [],
+    currentPage: 1,
+    pages: 0,
+    totalCount: 0,
+    pageSize: DEFAULT_PAGE_SIZE
+  });
+
+  const {
+    data: gridData,
+    isLoading: isGridLoading,
+    isFetching: isGridFetching,
+    error: isGridError
+  } = useQuery({
+    queryKey: ['sampleItems', queryParams, refreshKey],
+    queryFn: () => fetchSampleItems({ ...queryParams, page: queryParams.page - 1 }),
+    enabled: true
+  });
+
+  useEffect(() => {
+    if (!gridData) {
+      return;
+    }
+
+    setList(prev => ({
+      ...prev,
+      content: gridData?.content || [],
+      currentPage: (gridData?.number ?? 0) + 1,
+      pages: gridData?.totalPages || 0,
+      totalCount: gridData?.totalElements || 0,
+      pageSize: gridData?.size || DEFAULT_PAGE_SIZE
+    }));
+  }, [gridData]);
+
+  useEffect(() => {
+    if (props?.pageInfo?.refresh) {
+      setRefreshKey(prev => prev + 1);
+    }
+  }, [props?.pageInfo?.refresh]);
+
+  const saveMutation = useMutation({
+    mutationFn: values => {
+      if (itemModalState.mode === 'edit' && itemModalState.data?.id) {
+        return updateSampleItem(itemModalState.data.id, values);
+      }
+
+      return createSampleItem(values);
+    },
+    onSuccess: () => {
+      message.success(itemModalState.mode === 'edit' ? '수정되었습니다.' : '등록되었습니다.');
+      setItemModalState({ open: false, mode: 'create', data: null });
+      setRefreshKey(prev => prev + 1);
+    },
+    onError: () => {
+      message.error('저장에 실패했습니다.');
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteSampleItem,
+    onSuccess: () => {
+      message.success('삭제되었습니다.');
+      setRefreshKey(prev => prev + 1);
+    },
+    onError: () => {
+      message.error('삭제에 실패했습니다.');
+    }
+  });
+
+  const handleReset = useCallback(form => {
+    form?.resetFields();
+    setQueryParams({ page: 1, size: DEFAULT_PAGE_SIZE });
+    setRefreshKey(prev => prev + 1);
+  }, []);
+
+  const handleSearch = useCallback(values => {
+    setQueryParams(prev => ({
+      ...prev,
+      keyword: values.keyword || undefined,
+      status: values.status || undefined,
+      page: 1
+    }));
+  }, []);
+
+  const handleChangePaging = useCallback(next => {
+    setQueryParams(prev => ({
+      ...prev,
+      page: next.page ?? 1,
+      size: next.size ?? prev.size
+    }));
+  }, []);
+
+  const handleEditItem = useCallback((item, mode = 'edit') => {
+    setItemModalState({
+      open: true,
+      mode,
+      data: item
+    });
+  }, []);
+
+  const handleItemModalClose = useCallback(() => {
+    setItemModalState({ open: false, mode: 'create', data: null });
+  }, []);
+
+  return (
+    <div className="sample-page">
+      <div className="sample-page__header">
+        <Title level={4} className="sample-page__title">
+          샘플 목록
+        </Title>
+        <Button icon={<ReloadOutlined />} onClick={() => setRefreshKey(prev => prev + 1)}>
+          새로고침
+        </Button>
       </div>
 
-      <Row gutter={[16, 16]}>
-        <Col xs={24} xl={10}>
-          <Card
-            title={editing ? '샘플 수정' : '샘플 등록'}
-            extra={
-              <Button
-                icon={<PlusOutlined />}
-                onClick={() => {
-                  setEditing(null);
-                  form.resetFields();
-                }}
-              >
-                신규
-              </Button>
-            }
-          >
-            <Form form={form} layout="vertical" initialValues={{ status: 'TODO' }} onFinish={handleSubmit}>
-              <Form.Item name="title" label="제목" rules={[{ required: true, message: '제목을 입력하세요.' }]}>
-                <Input placeholder="샘플 항목 제목" />
-              </Form.Item>
-              <Form.Item name="description" label="설명">
-                <Input.TextArea rows={4} placeholder="설명" />
-              </Form.Item>
-              <Form.Item name="status" label="상태" rules={[{ required: true }]}>
-                <Select options={statusOptions} />
-              </Form.Item>
-              <Space>
-                <Button type="primary" htmlType="submit">
-                  저장
-                </Button>
-                <Button onClick={showCurrentUser}>JSON 사용자 확인</Button>
-              </Space>
-            </Form>
-          </Card>
-        </Col>
+      <SampleSearch onSearch={handleSearch} onReset={handleReset} refreshKey={refreshKey} />
 
-        <Col xs={24} xl={14}>
-          <Card
-            title="샘플 목록"
-            extra={
-              <Space>
-                <Input.Search
-                  allowClear
-                  placeholder="검색"
-                  value={keyword}
-                  onChange={event => setKeyword(event.target.value)}
-                  onSearch={value => loadItems(value)}
-                  className="sample-search"
-                />
-                <Button icon={<ReloadOutlined />} onClick={() => loadItems()} />
-              </Space>
-            }
-          >
-            <Table
-              rowKey="id"
-              loading={loading}
-              columns={columns}
-              dataSource={items}
-              pagination={{ pageSize: 5 }}
-              expandable={{ expandedRowRender: record => record.description || '-' }}
-            />
-          </Card>
-        </Col>
-      </Row>
+      <SampleGrid
+        gridRef={gridRef}
+        list={list}
+        loading={(isGridLoading || isGridFetching) && list.content.length === 0}
+        error={isGridError}
+        onEditItem={handleEditItem}
+        onDeleteItem={id => deleteMutation.mutate(id)}
+        onChangePaging={handleChangePaging}
+        refreshKey={refreshKey}
+      />
 
-      <div className="sample-grid">
-        <Card title="기본 입력">
-          <Space direction="vertical" className="sample-stack">
-            <Input placeholder="Input" />
-            <Input.Password placeholder="Password" />
-            <InputNumber min={0} max={100} defaultValue={12} className="sample-full-width" />
-            <Select defaultValue="A" options={[{ value: 'A' }, { value: 'B' }, { value: 'C' }]} />
-            <DatePicker className="sample-full-width" />
-            <TimePicker className="sample-full-width" />
-          </Space>
-        </Card>
-
-        <Card title="선택 컨트롤">
-          <Space direction="vertical" className="sample-stack">
-            <Checkbox.Group options={['조회', '등록', '수정', '삭제']} defaultValue={['조회']} />
-            <Radio.Group defaultValue="daily" options={[{ label: '일간', value: 'daily' }, { label: '월간', value: 'monthly' }]} />
-            <Segmented options={['목록', '차트', '설정']} />
-            <Switch checkedChildren="ON" unCheckedChildren="OFF" defaultChecked />
-            <Slider defaultValue={42} />
-            <Rate defaultValue={3} />
-          </Space>
-        </Card>
-
-        <Card title="피드백">
-          <Space direction="vertical" className="sample-stack">
-            <Alert type="success" showIcon message="저장되었습니다." />
-            <Spin spinning={loading}>
-              <Typography.Text>로딩 상태는 Spin으로 감쌉니다.</Typography.Text>
-            </Spin>
-            <Progress percent={68} />
-            <Badge count={5}>
-              <Button>알림</Button>
-            </Badge>
-          </Space>
-        </Card>
-
-        <Card title="오버레이">
-          <Space wrap>
-            <Tooltip title="도움말 메시지">
-              <Button>Tooltip</Button>
-            </Tooltip>
-            <Dropdown menu={{ items: [{ key: '1', label: '메뉴 1' }, { key: '2', label: '메뉴 2' }] }}>
-              <Button icon={<SettingOutlined />}>Dropdown</Button>
-            </Dropdown>
-            <Button onClick={() => setDrawerOpen(true)}>Drawer</Button>
-            <Button onClick={() => modal.info({ title: 'Modal', content: '업무 확인 창 샘플입니다.' })}>
-              Modal
-            </Button>
-            <Upload beforeUpload={() => false} maxCount={1}>
-              <Button icon={<UploadOutlined />}>Upload</Button>
-            </Upload>
-          </Space>
-        </Card>
-
-        <Card title="데이터 표시">
-          <Tabs
-            items={[
-              {
-                key: 'stat',
-                label: 'Statistic',
-                children: <Statistic title="처리 건수" value={1280} suffix="건" />
-              },
-              {
-                key: 'list',
-                label: 'List',
-                children: (
-                  <List
-                    size="small"
-                    dataSource={['JSON', 'Mapper', 'Service']}
-                    renderItem={item => <List.Item>{item}</List.Item>}
-                  />
-                )
-              }
-            ]}
-          />
-        </Card>
-
-        <Card title="흐름 표시">
-          <Timeline
-            className="sample-timeline"
-            items={[
-              { color: 'green', children: '요청 접수' },
-              { color: 'blue', children: '처리 중' },
-              { color: 'gray', children: '완료 대기' }
-            ]}
-          />
-        </Card>
-
-        <Card title="Tree / Transfer">
-          <Tree treeData={treeData} defaultExpandAll />
-          <Transfer
-            dataSource={transferItems}
-            targetKeys={targetKeys}
-            onChange={nextKeys => setTargetKeys(nextKeys)}
-            render={item => item.title}
-            className="sample-transfer"
-          />
-        </Card>
-
-        <Card title="업무 카드">
-          <Space direction="vertical" className="sample-stack">
-            <Typography.Title level={5} className="sample-card-title">
-              업무 상태
-            </Typography.Title>
-            <Typography.Paragraph type="secondary">
-              Card, Space, Typography 조합으로 간단한 업무 패널을 구성합니다.
-            </Typography.Paragraph>
-            <Button type="primary" icon={<ExperimentOutlined />}>
-              테스트 실행
-            </Button>
-          </Space>
-        </Card>
-      </div>
-
-      <Drawer title="Drawer 샘플" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-        <Typography.Paragraph>
-          상세 정보, 필터, 보조 작업은 오른쪽 패널에서 처리할 수 있습니다.
-        </Typography.Paragraph>
-      </Drawer>
-    </>
+      <SampleItemModal
+        open={itemModalState.open}
+        mode={itemModalState.mode}
+        data={itemModalState.data}
+        confirmLoading={saveMutation.isPending}
+        onClose={handleItemModalClose}
+        onSubmit={values => saveMutation.mutate(values)}
+      />
+    </div>
   );
 }
