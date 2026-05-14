@@ -274,8 +274,7 @@ export default function SamplePage(props) {
   });
 
   const {
-    data: agentStatus,
-    refetch: refetchAgentStatus
+    data: agentStatus
   } = useQuery({
     queryKey: ['agentBatchStatus'],
     queryFn: fetchAgentBatchStatus,
@@ -342,11 +341,18 @@ export default function SamplePage(props) {
 
   const agentMutation = useMutation({
     mutationFn: requestAgentBatch,
-    onSuccess: async data => {
-      // agent는 긴 작업 결과가 아니라 "접수됨"만 반환합니다.
-      // 완료 여부는 아래 refetch/polling 흐름으로 별도 확인합니다.
-      message.info(data?.message ?? '요청되었습니다.');
-      await refetchAgentStatus();
+    onSuccess: data => {
+      const requestedStatus = {
+        jobId: data?.job_id,
+        status: 'requested',
+        message: data?.message ?? '요청되었습니다.',
+        method: data?.method,
+        payload: data,
+        updatedAt: new Date().toISOString()
+      };
+
+      queryClient.setQueryData(['agentBatchStatus'], requestedStatus);
+      message.info(requestedStatus.message);
     },
     onError: () => {
       message.error('에이전트 요청에 실패했습니다.');

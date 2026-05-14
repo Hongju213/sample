@@ -3,9 +3,19 @@ import testData from '../dev/testData.json';
 let localItems = [...testData.sampleItems];
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
+const AGENT_BASE_URL = (import.meta.env.VITE_AGENT_BASE_URL ?? 'http://127.0.0.1:8000').replace(/\/$/, '');
+const AGENT_CALLBACK_BASE_URL = (import.meta.env.VITE_AGENT_CALLBACK_BASE_URL ?? API_BASE_URL).replace(/\/$/, '');
 
-async function fetchJson(path, options) {
-  const url = `${API_BASE_URL}${path}`;
+function resolveUrl(pathOrUrl, baseUrl = API_BASE_URL) {
+  if (/^https?:\/\//i.test(pathOrUrl)) {
+    return pathOrUrl;
+  }
+
+  return `${baseUrl}${pathOrUrl}`;
+}
+
+async function fetchJson(pathOrUrl, options, baseUrl = API_BASE_URL) {
+  const url = resolveUrl(pathOrUrl, baseUrl);
   const response = await fetch(url, options);
   const contentType = response.headers.get('content-type') ?? '';
 
@@ -62,31 +72,40 @@ export async function fetchCurrentUser() {
 }
 
 export async function requestAgentBatch(method = 'GET') {
-  // 화면의 GET/POST 버튼이 호출하는 API입니다.
-  // 브라우저는 Vite proxy를 통해 sample backend(/api/agent-test/bat)를 호출하고,
-  // sample backend가 다시 local agent(127.0.0.1:8000)로 요청을 중계합니다.
-  const options = method === 'POST'
-    ? {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          source: 'sample-frontend',
-          message: 'POST 요청 테스트'
-        })
-      }
-    : { method: 'GET' };
+  if (!/^https?:\/\//i.test(AGENT_CALLBACK_BASE_URL)) {
+    throw new Error('VITE_AGENT_CALLBACK_BASE_URL or VITE_API_BASE_URL must be an absolute backend URL.');
+  }
 
-  return fetchJson('/api/agent-test/bat', options);
+  const callbackUrl = `${AGENT_CALLBACK_BASE_URL}/api/agent-test/callback`;
+  const payload = {
+    source: 'sample-frontend',
+    message: `${method} request test`,
+    callback_url: callbackUrl
+  };
+
+  if (method === 'POST') {
+    return fetchJson('/api/bat/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }, AGENT_BASE_URL);
+  }
+
+  const searchParams = new URLSearchParams({
+    source: payload.source,
+    message: payload.message,
+    callback_url: callbackUrl
+  });
+
+  return fetchJson(`/api/bat/test?${searchParams.toString()}`, { method: 'GET' }, AGENT_BASE_URL);
 }
 
 export async function fetchAgentBatchStatus() {
-  // sample backend에 저장된 마지막 agent 작업 상태를 조회합니다.
-  // requested이면 화면은 "요청되었습니다.", completed이면 "완료되었습니다."를 보여줍니다.
   return fetchJson('/api/agent-test/status');
 }
 
 export function subscribeAgentBatchStatus(onStatus, onError) {
-  const eventSource = new EventSource(`${API_BASE_URL}/api/agent-test/events`);
+  const eventSource = new EventSource(resolveUrl('/api/agent-test/events'));
 
   eventSource.addEventListener('agent-status', event => {
     onStatus(JSON.parse(event.data));
