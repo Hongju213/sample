@@ -21,6 +21,21 @@
   flex-shrink: 0;
 }
 
+.sample-agent-card {
+  flex-shrink: 0;
+}
+
+.sample-agent-card__content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sample-agent-card__status {
+  flex: 1;
+}
+
 .sample-search-card .ant-form {
   row-gap: 8px;
 }
@@ -59,6 +74,11 @@
 
   .sample-page__header {
     align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sample-agent-card__content {
+    align-items: stretch;
     flex-direction: column;
   }
 

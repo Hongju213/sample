@@ -1,13 +1,15 @@
 import React from 'react';
 import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
-import { App, Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Tag, Typography } from 'antd';
+import { App, Alert, Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Tag, Typography } from 'antd';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Grid from '../../components/Grid.jsx';
 import {
   createSampleItem,
   deleteSampleItem,
+  fetchAgentBatchStatus,
   fetchSampleItems,
+  requestAgentBatch,
   updateSampleItem
 } from '../../apis/sampleItemApi.js';
 import { formatDateTime, statusColor, statusLabels, statusOptions } from '../../utils/format.js';
@@ -55,6 +57,36 @@ function SampleSearch({ onSearch, onReset, refreshKey }) {
           </Space>
         </Form.Item>
       </Form>
+    </Card>
+  );
+}
+
+function AgentBatchTest({ status, loading, onRequestGet, onRequestPost }) {
+  // agent 테스트 전용 패널입니다.
+  // 요청 버튼은 긴 작업을 기다리지 않고 즉시 반환되는 sample API를 호출합니다.
+  // 상태 문구는 fetchAgentBatchStatus()의 polling 결과로 갱신됩니다.
+  const label = status?.message ?? '대기 중입니다.';
+  const type = status?.status === 'completed' ? 'success' : status?.status === 'requested' ? 'info' : 'warning';
+
+  return (
+    <Card size="small" className="sample-agent-card">
+      <div className="sample-agent-card__content">
+        <Alert
+          className="sample-agent-card__status"
+          type={type}
+          showIcon
+          message={label}
+          description={status?.jobId ? `Job ID: ${status.jobId}` : '에이전트 배치 콜백 테스트 대기 중'}
+        />
+        <Space>
+          <Button loading={loading} onClick={onRequestGet}>
+            GET 요청
+          </Button>
+          <Button type="primary" loading={loading} onClick={onRequestPost}>
+            POST 요청
+          </Button>
+        </Space>
+      </div>
     </Card>
   );
 }
@@ -239,6 +271,18 @@ export default function SamplePage(props) {
     enabled: true
   });
 
+  const {
+    data: agentStatus,
+    refetch: refetchAgentStatus
+  } = useQuery({
+    queryKey: ['agentBatchStatus'],
+    queryFn: fetchAgentBatchStatus,
+    // 배치/Python 작업이 완료되기 전에는 1초마다 상태를 확인합니다.
+    // completed가 오면 polling을 멈춰 불필요한 요청을 줄입니다.
+    refetchInterval: query => (query.state.data?.status === 'requested' ? 1000 : false),
+    retry: false
+  });
+
   useEffect(() => {
     if (!gridData) {
       return;
@@ -289,6 +333,19 @@ export default function SamplePage(props) {
     }
   });
 
+  const agentMutation = useMutation({
+    mutationFn: requestAgentBatch,
+    onSuccess: async data => {
+      // agent는 긴 작업 결과가 아니라 "접수됨"만 반환합니다.
+      // 완료 여부는 아래 refetch/polling 흐름으로 별도 확인합니다.
+      message.info(data?.message ?? '요청되었습니다.');
+      await refetchAgentStatus();
+    },
+    onError: () => {
+      message.error('에이전트 요청에 실패했습니다.');
+    }
+  });
+
   const handleReset = useCallback(form => {
     form?.resetFields();
     setQueryParams({ page: 1, size: DEFAULT_PAGE_SIZE });
@@ -336,6 +393,13 @@ export default function SamplePage(props) {
       </div>
 
       <SampleSearch onSearch={handleSearch} onReset={handleReset} refreshKey={refreshKey} />
+
+      <AgentBatchTest
+        status={agentStatus}
+        loading={agentMutation.isPending}
+        onRequestGet={() => agentMutation.mutate('GET')}
+        onRequestPost={() => agentMutation.mutate('POST')}
+      />
 
       <SampleGrid
         gridRef={gridRef}

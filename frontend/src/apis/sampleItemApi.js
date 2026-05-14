@@ -41,6 +41,40 @@ export async function fetchCurrentUser() {
   return testData.currentUser;
 }
 
+export async function requestAgentBatch(method = 'GET') {
+  // 화면의 GET/POST 버튼이 호출하는 API입니다.
+  // 브라우저는 Vite proxy를 통해 sample backend(/api/agent-test/bat)를 호출하고,
+  // sample backend가 다시 local agent(127.0.0.1:8000)로 요청을 중계합니다.
+  const options = method === 'POST'
+    ? {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source: 'sample-frontend',
+          message: 'POST 요청 테스트'
+        })
+      }
+    : { method: 'GET' };
+
+  const response = await fetch('/api/agent-test/bat', options);
+  if (!response.ok) {
+    throw new Error('Agent request failed');
+  }
+
+  return response.json();
+}
+
+export async function fetchAgentBatchStatus() {
+  // sample backend에 저장된 마지막 agent 작업 상태를 조회합니다.
+  // requested이면 화면은 "요청되었습니다.", completed이면 "완료되었습니다."를 보여줍니다.
+  const response = await fetch('/api/agent-test/status');
+  if (!response.ok) {
+    throw new Error('Agent status request failed');
+  }
+
+  return response.json();
+}
+
 // Keep this shape close to Spring Page so the screen state flow stays realistic.
 function getPage(items, params = {}) {
   const page = params.page ?? 0;
