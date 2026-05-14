@@ -1,7 +1,7 @@
 import React from 'react';
 import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { App, Alert, Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Tag, Typography } from 'antd';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Grid from '../../components/Grid.jsx';
 import {
@@ -10,6 +10,7 @@ import {
   fetchAgentBatchStatus,
   fetchSampleItems,
   requestAgentBatch,
+  subscribeAgentBatchStatus,
   updateSampleItem
 } from '../../apis/sampleItemApi.js';
 import { formatDateTime, statusColor, statusLabels, statusOptions } from '../../utils/format.js';
@@ -241,6 +242,7 @@ function SampleItemModal({ open, mode, data, confirmLoading, onClose, onSubmit }
 
 export default function SamplePage(props) {
   const { message } = App.useApp();
+  const queryClient = useQueryClient();
   const gridRef = useRef(null);
   const [queryParams, setQueryParams] = useState({
     page: 1,
@@ -277,11 +279,16 @@ export default function SamplePage(props) {
   } = useQuery({
     queryKey: ['agentBatchStatus'],
     queryFn: fetchAgentBatchStatus,
-    // 배치/Python 작업이 완료되기 전에는 1초마다 상태를 확인합니다.
-    // completed가 오면 polling을 멈춰 불필요한 요청을 줄입니다.
-    refetchInterval: query => (query.state.data?.status === 'requested' ? 1000 : false),
+    // 테스트 단계에서는 버튼 요청이 실패하거나 외부에서 callback이 직접 들어와도
+    // 화면이 backend의 최신 상태를 따라가도록 상태 API를 계속 확인합니다.
     retry: false
   });
+
+  useEffect(() => {
+    return subscribeAgentBatchStatus(status => {
+      queryClient.setQueryData(['agentBatchStatus'], status);
+    });
+  }, [queryClient]);
 
   useEffect(() => {
     if (!gridData) {

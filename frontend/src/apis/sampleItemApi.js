@@ -2,6 +2,26 @@ import testData from '../dev/testData.json';
 
 let localItems = [...testData.sampleItems];
 
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
+
+async function fetchJson(path, options) {
+  const url = `${API_BASE_URL}${path}`;
+  const response = await fetch(url, options);
+  const contentType = response.headers.get('content-type') ?? '';
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`API request failed: ${response.status} ${response.statusText} ${url} ${text.slice(0, 120)}`);
+  }
+
+  if (!contentType.includes('application/json')) {
+    const text = await response.text();
+    throw new Error(`API did not return JSON: ${url} content-type=${contentType} body=${text.slice(0, 120)}`);
+  }
+
+  return response.json();
+}
+
 export async function fetchSampleItems(params = {}) {
   return getPage(localItems, params);
 }
@@ -56,23 +76,27 @@ export async function requestAgentBatch(method = 'GET') {
       }
     : { method: 'GET' };
 
-  const response = await fetch('/api/agent-test/bat', options);
-  if (!response.ok) {
-    throw new Error('Agent request failed');
-  }
-
-  return response.json();
+  return fetchJson('/api/agent-test/bat', options);
 }
 
 export async function fetchAgentBatchStatus() {
   // sample backend에 저장된 마지막 agent 작업 상태를 조회합니다.
   // requested이면 화면은 "요청되었습니다.", completed이면 "완료되었습니다."를 보여줍니다.
-  const response = await fetch('/api/agent-test/status');
-  if (!response.ok) {
-    throw new Error('Agent status request failed');
-  }
+  return fetchJson('/api/agent-test/status');
+}
 
-  return response.json();
+export function subscribeAgentBatchStatus(onStatus, onError) {
+  const eventSource = new EventSource(`${API_BASE_URL}/api/agent-test/events`);
+
+  eventSource.addEventListener('agent-status', event => {
+    onStatus(JSON.parse(event.data));
+  });
+
+  eventSource.onerror = error => {
+    onError?.(error);
+  };
+
+  return () => eventSource.close();
 }
 
 // Keep this shape close to Spring Page so the screen state flow stays realistic.
