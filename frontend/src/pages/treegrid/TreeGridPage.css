@@ -117,6 +117,28 @@
   background: #eef6ff;
 }
 
+.treegrid-grid .ag-row.is-drag-over-row::before {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  border: 2px solid #1677ff;
+  border-radius: 4px;
+  background: rgba(22, 119, 255, 0.08);
+  pointer-events: none;
+  content: '';
+}
+
+.treegrid-grid .ag-cell.is-drag-over-cell {
+  background: #e6f4ff;
+  box-shadow: inset 0 0 0 2px #1677ff;
+}
+
+.treegrid-grid .ag-cell.is-drag-over-cell .row-drop-cell,
+.treegrid-grid .ag-cell.is-drag-over-cell .drop-cell,
+.treegrid-grid .ag-cell.is-drag-over-cell .path-input {
+  background: transparent;
+}
+
 .path-input {
   width: 100%;
   height: 28px;

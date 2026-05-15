@@ -1,7 +1,7 @@
 import React from 'react';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { Button, Empty, Popconfirm, Space, Spin, Tag } from 'antd';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import Grid from '../../components/Grid.jsx';
 import { DROP_FIELDS, MODE, readTreeDragData } from './treeGridUtils.js';
 
@@ -29,7 +29,7 @@ function useGridDrop(params, field) {
   );
 }
 
-function getGridDropField(event) {
+function getGridDropTarget(event, gridApi) {
   const cell = event.target?.closest?.('.ag-cell');
   const row = event.target?.closest?.('.ag-row');
 
@@ -38,21 +38,37 @@ function getGridDropField(event) {
   }
 
   const colId = cell.getAttribute('col-id');
-  const rowId = row.getAttribute('row-id');
+  const rowIndex = Number(row.getAttribute('row-index'));
+  const rowData = Number.isFinite(rowIndex) ? gridApi?.getDisplayedRowAtIndex(rowIndex)?.data : null;
+  const rowId = rowData?.id ?? row.getAttribute('row-id');
 
   if (!rowId) {
     return null;
   }
 
   if (colId === 'rowDrop') {
-    return { rowId, field: 'row' };
+    return { cell, row, rowId, field: 'row' };
   }
 
   if (DROP_FIELDS.includes(colId) || colId === 'path') {
-    return { rowId, field: colId };
+    return { cell, row, rowId, field: colId };
   }
 
   return null;
+}
+
+function clearDragOver(container) {
+  container
+    ?.querySelectorAll?.('.is-drag-over-row, .is-drag-over-cell')
+    .forEach(element => {
+      element.classList.remove('is-drag-over-row', 'is-drag-over-cell');
+    });
+}
+
+function markDragOver(container, target) {
+  clearDragOver(container);
+  target?.row?.classList.add('is-drag-over-row');
+  target?.cell?.classList.add('is-drag-over-cell');
 }
 
 function RowDropRenderer(params) {
@@ -108,6 +124,7 @@ export default function TreeGridPanel({
   onUpdateCell
 }) {
   const [selectedItem, setSelectedItem] = useState(null);
+  const gridApiRef = useRef(null);
 
   const rendererParams = useMemo(
     () => ({
@@ -189,13 +206,27 @@ export default function TreeGridPanel({
     onChangePaging({ page: pageNum });
   };
 
+  const handleGridDragOver = useCallback(event => {
+    allowDrop(event);
+    markDragOver(event.currentTarget, getGridDropTarget(event, gridApiRef.current));
+  }, []);
+
+  const handleGridDragLeave = useCallback(event => {
+    if (event.currentTarget.contains(event.relatedTarget)) {
+      return;
+    }
+
+    clearDragOver(event.currentTarget);
+  }, []);
+
   const handleGridDrop = useCallback(
     event => {
       event.preventDefault();
       event.stopPropagation();
 
       const dragData = readTreeDragData(event);
-      const target = getGridDropField(event);
+      const target = getGridDropTarget(event, gridApiRef.current);
+      clearDragOver(event.currentTarget);
 
       if (!dragData || !target) {
         return;
@@ -233,8 +264,9 @@ export default function TreeGridPanel({
       ) : (
         <div
           className="treegrid-grid"
-          onDragEnterCapture={allowDrop}
-          onDragOverCapture={allowDrop}
+          onDragEnterCapture={handleGridDragOver}
+          onDragOverCapture={handleGridDragOver}
+          onDragLeaveCapture={handleGridDragLeave}
           onDropCapture={handleGridDrop}
         >
           <Grid
@@ -242,7 +274,10 @@ export default function TreeGridPanel({
             loading={loading && list.content.length === 0}
             columnDefs={gridColumnDefs}
             gridOptions={{
-              defaultColDef: { sortable: true, resizable: true, filter: false }
+              defaultColDef: { sortable: true, resizable: true, filter: false },
+              onGridReady: event => {
+                gridApiRef.current = event.api;
+              }
             }}
             onClicked={event => handleClickRow(event.data, event.node)}
             currentPage={list.currentPage}
