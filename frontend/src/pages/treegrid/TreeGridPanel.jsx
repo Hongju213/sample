@@ -1,7 +1,7 @@
 import React from 'react';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { Button, Empty, Popconfirm, Space, Spin, Tag } from 'antd';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Grid from '../../components/Grid.jsx';
 import { DROP_FIELDS, MODE, readTreeDragData } from './treeGridUtils.js';
 
@@ -12,46 +12,41 @@ function allowDrop(event) {
   }
 }
 
-function useGridDrop(params, field) {
-  return useCallback(
-    event => {
-      event.preventDefault();
-      event.stopPropagation();
-
-      const dragData = readTreeDragData(event);
-      if (!dragData || !params.data || !params.applyDrop) {
-        return;
-      }
-
-      params.applyDrop(params.data.id, field, dragData);
-    },
-    [field, params]
-  );
+function isPointInRect(event, rect) {
+  return event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
 }
 
-function getGridDropTarget(event, gridApi) {
-  const cell = event.target?.closest?.('.ag-cell');
-  const row = event.target?.closest?.('.ag-row');
+function getPointedElement(elements, event) {
+  return elements.find(element => isPointInRect(event, element.getBoundingClientRect()));
+}
 
-  if (!cell || !row) {
+function getGridDropTarget(container, event, gridApi, rows) {
+  const row = getPointedElement(Array.from(container.querySelectorAll('.ag-row[row-index]')), event);
+
+  if (!row) {
     return null;
   }
 
-  const colId = cell.getAttribute('col-id');
+  const cell = getPointedElement(Array.from(row.querySelectorAll('.ag-cell[col-id]')), event);
+  const colId = cell?.getAttribute('col-id');
   const rowIndex = Number(row.getAttribute('row-index'));
   const rowData = Number.isFinite(rowIndex) ? gridApi?.getDisplayedRowAtIndex(rowIndex)?.data : null;
-  const rowId = rowData?.id ?? row.getAttribute('row-id');
+  const fallbackData = Number.isFinite(rowIndex) ? rows[rowIndex] : null;
+  const rowId = rowData?.id ?? fallbackData?.id;
 
-  if (!rowId) {
+  if (rowId == null) {
     return null;
   }
 
+  const rowSelector = `.ag-row[row-index="${rowIndex}"]`;
+  const rowElements = Array.from(container.querySelectorAll(rowSelector));
+
   if (colId === 'rowDrop') {
-    return { cell, row, rowId, field: 'row' };
+    return { cell, rowElements, rowId, field: 'row' };
   }
 
   if (DROP_FIELDS.includes(colId) || colId === 'path') {
-    return { cell, row, rowId, field: colId };
+    return { cell, rowElements, rowId, field: colId };
   }
 
   return null;
@@ -67,15 +62,13 @@ function clearDragOver(container) {
 
 function markDragOver(container, target) {
   clearDragOver(container);
-  target?.row?.classList.add('is-drag-over-row');
+  target?.rowElements?.forEach(row => row.classList.add('is-drag-over-row'));
   target?.cell?.classList.add('is-drag-over-cell');
 }
 
 function RowDropRenderer(params) {
-  const handleDrop = useGridDrop(params, 'row');
-
   return (
-    <label className="row-drop-cell" onDragEnter={allowDrop} onDragOver={allowDrop} onDrop={handleDrop}>
+    <label className="row-drop-cell">
       <input
         type="checkbox"
         checked={params.node.isSelected()}
@@ -86,11 +79,8 @@ function RowDropRenderer(params) {
 }
 
 function TextDropRenderer(params) {
-  const field = params.colDef?.field;
-  const handleDrop = useGridDrop(params, field);
-
   return (
-    <div className="drop-cell" onDragEnter={allowDrop} onDragOver={allowDrop} onDrop={handleDrop}>
+    <div className="drop-cell">
       {params.value}
     </div>
   );
@@ -98,16 +88,12 @@ function TextDropRenderer(params) {
 
 function PathDropRenderer(params) {
   const value = params.value ?? '';
-  const handleDrop = useGridDrop(params, 'path');
 
   return (
     <input
       className="path-input"
       value={value}
       onChange={event => params.updateCell?.(params.data.id, 'path', event.target.value)}
-      onDragEnter={allowDrop}
-      onDragOver={allowDrop}
-      onDrop={handleDrop}
     />
   );
 }
@@ -125,6 +111,7 @@ export default function TreeGridPanel({
 }) {
   const [selectedItem, setSelectedItem] = useState(null);
   const gridApiRef = useRef(null);
+  const gridContainerRef = useRef(null);
 
   const rendererParams = useMemo(
     () => ({
@@ -206,36 +193,53 @@ export default function TreeGridPanel({
     onChangePaging({ page: pageNum });
   };
 
-  const handleGridDragOver = useCallback(event => {
-    allowDrop(event);
-    markDragOver(event.currentTarget, getGridDropTarget(event, gridApiRef.current));
-  }, []);
-
-  const handleGridDragLeave = useCallback(event => {
-    if (event.currentTarget.contains(event.relatedTarget)) {
-      return;
+  useEffect(() => {
+    const container = gridContainerRef.current;
+    if (!container) {
+      return undefined;
     }
 
-    clearDragOver(event.currentTarget);
-  }, []);
+    const handleDragOver = event => {
+      allowDrop(event);
+      markDragOver(container, getGridDropTarget(container, event, gridApiRef.current, list.content));
+    };
 
-  const handleGridDrop = useCallback(
-    event => {
+    const handleDragLeave = event => {
+      if (container.contains(event.relatedTarget)) {
+        return;
+      }
+
+      clearDragOver(container);
+    };
+
+    const handleDrop = event => {
       event.preventDefault();
       event.stopPropagation();
 
       const dragData = readTreeDragData(event);
-      const target = getGridDropTarget(event, gridApiRef.current);
-      clearDragOver(event.currentTarget);
+      const target = getGridDropTarget(container, event, gridApiRef.current, list.content);
+      clearDragOver(container);
 
       if (!dragData || !target) {
         return;
       }
 
       onApplyDrop(target.rowId, target.field, dragData);
-    },
-    [onApplyDrop]
-  );
+    };
+
+    container.addEventListener('dragenter', handleDragOver, true);
+    container.addEventListener('dragover', handleDragOver, true);
+    container.addEventListener('dragleave', handleDragLeave, true);
+    container.addEventListener('drop', handleDrop, true);
+
+    return () => {
+      container.removeEventListener('dragenter', handleDragOver, true);
+      container.removeEventListener('dragover', handleDragOver, true);
+      container.removeEventListener('dragleave', handleDragLeave, true);
+      container.removeEventListener('drop', handleDrop, true);
+      clearDragOver(container);
+    };
+  }, [list.content, onApplyDrop]);
 
   return (
     <section className="grid-panel">
@@ -263,11 +267,8 @@ export default function TreeGridPanel({
         </div>
       ) : (
         <div
+          ref={gridContainerRef}
           className="treegrid-grid"
-          onDragEnterCapture={handleGridDragOver}
-          onDragOverCapture={handleGridDragOver}
-          onDragLeaveCapture={handleGridDragLeave}
-          onDropCapture={handleGridDrop}
         >
           <Grid
             list={list.content}
