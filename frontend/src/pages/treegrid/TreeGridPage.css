@@ -40,6 +40,15 @@
   font-size: 13px;
 }
 
+.node-tree-title {
+  width: 100%;
+  cursor: grab;
+}
+
+.node-tree-title:active {
+  cursor: grabbing;
+}
+
 .grid-panel {
   display: flex;
   flex: 1;

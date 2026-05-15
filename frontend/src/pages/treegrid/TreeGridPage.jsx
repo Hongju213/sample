@@ -125,7 +125,7 @@ export default function TreeGridPage() {
   const handleApplyDrop = useCallback((rowId, field, dragData) => {
     setList(prev => ({
       ...prev,
-      content: prev.content.map(row => (row.id === rowId ? applyDropToRow(row, field, dragData) : row))
+      content: prev.content.map(row => (String(row.id) === String(rowId) ? applyDropToRow(row, field, dragData) : row))
     }));
   }, []);
 

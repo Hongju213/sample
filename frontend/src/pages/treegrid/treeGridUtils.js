@@ -1,6 +1,9 @@
 export const DEFAULT_PAGE_SIZE = 10;
 export const TREE_NODE_MIME = 'application/x-tree-node';
+export const TREE_NODE_TEXT_PREFIX = 'tree-node:';
 export const DROP_FIELDS = ['col1', 'col2', 'col3', 'col4', 'col5'];
+
+let currentTreeDragData = null;
 
 export const MODE = {
   CREATE: 'create',
@@ -15,17 +18,45 @@ export function toAntTreeData(nodes) {
   }));
 }
 
-export function readTreeDragData(event) {
-  const raw = event.dataTransfer.getData(TREE_NODE_MIME);
-  if (!raw) {
-    return null;
+export function beginTreeDrag(event, dragData) {
+  currentTreeDragData = dragData;
+
+  if (!event.dataTransfer) {
+    return;
   }
 
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
+  const encoded = JSON.stringify(dragData);
+  event.dataTransfer.effectAllowed = 'copy';
+  event.dataTransfer.setData(TREE_NODE_MIME, encoded);
+  event.dataTransfer.setData('application/json', encoded);
+  event.dataTransfer.setData('text/plain', `${TREE_NODE_TEXT_PREFIX}${encoded}`);
+}
+
+export function endTreeDrag() {
+  currentTreeDragData = null;
+}
+
+export function readTreeDragData(event) {
+  if (!event.dataTransfer) {
+    return currentTreeDragData;
   }
+
+  const raw =
+    event.dataTransfer.getData(TREE_NODE_MIME) ||
+    event.dataTransfer.getData('application/json') ||
+    readTreeNodeText(event.dataTransfer.getData('text/plain'));
+
+  try {
+    return raw ? JSON.parse(raw) : currentTreeDragData;
+  } catch {
+    return currentTreeDragData;
+  }
+}
+
+function readTreeNodeText(text) {
+  return text?.startsWith(TREE_NODE_TEXT_PREFIX)
+    ? text.slice(TREE_NODE_TEXT_PREFIX.length)
+    : '';
 }
 
 export function appendPath(path, nodeName) {

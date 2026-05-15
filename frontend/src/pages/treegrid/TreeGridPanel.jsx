@@ -7,7 +7,9 @@ import { DROP_FIELDS, MODE, readTreeDragData } from './treeGridUtils.js';
 
 function allowDrop(event) {
   event.preventDefault();
-  event.dataTransfer.dropEffect = 'copy';
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'copy';
+  }
 }
 
 function useGridDrop(params, field) {
@@ -27,11 +29,37 @@ function useGridDrop(params, field) {
   );
 }
 
+function getGridDropField(event) {
+  const cell = event.target?.closest?.('.ag-cell');
+  const row = event.target?.closest?.('.ag-row');
+
+  if (!cell || !row) {
+    return null;
+  }
+
+  const colId = cell.getAttribute('col-id');
+  const rowId = row.getAttribute('row-id');
+
+  if (!rowId) {
+    return null;
+  }
+
+  if (colId === 'rowDrop') {
+    return { rowId, field: 'row' };
+  }
+
+  if (DROP_FIELDS.includes(colId) || colId === 'path') {
+    return { rowId, field: colId };
+  }
+
+  return null;
+}
+
 function RowDropRenderer(params) {
   const handleDrop = useGridDrop(params, 'row');
 
   return (
-    <label className="row-drop-cell" onDragOver={allowDrop} onDrop={handleDrop}>
+    <label className="row-drop-cell" onDragEnter={allowDrop} onDragOver={allowDrop} onDrop={handleDrop}>
       <input
         type="checkbox"
         checked={params.node.isSelected()}
@@ -46,7 +74,7 @@ function TextDropRenderer(params) {
   const handleDrop = useGridDrop(params, field);
 
   return (
-    <div className="drop-cell" onDragOver={allowDrop} onDrop={handleDrop}>
+    <div className="drop-cell" onDragEnter={allowDrop} onDragOver={allowDrop} onDrop={handleDrop}>
       {params.value}
     </div>
   );
@@ -61,6 +89,7 @@ function PathDropRenderer(params) {
       className="path-input"
       value={value}
       onChange={event => params.updateCell?.(params.data.id, 'path', event.target.value)}
+      onDragEnter={allowDrop}
       onDragOver={allowDrop}
       onDrop={handleDrop}
     />
@@ -160,6 +189,23 @@ export default function TreeGridPanel({
     onChangePaging({ page: pageNum });
   };
 
+  const handleGridDrop = useCallback(
+    event => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const dragData = readTreeDragData(event);
+      const target = getGridDropField(event);
+
+      if (!dragData || !target) {
+        return;
+      }
+
+      onApplyDrop(target.rowId, target.field, dragData);
+    },
+    [onApplyDrop]
+  );
+
   return (
     <section className="grid-panel">
       <div className="grid-panel-header">
@@ -185,7 +231,12 @@ export default function TreeGridPanel({
           <Empty description="트리를 선택하면 그리드가 조회됩니다." />
         </div>
       ) : (
-        <div className="treegrid-grid">
+        <div
+          className="treegrid-grid"
+          onDragEnterCapture={allowDrop}
+          onDragOverCapture={allowDrop}
+          onDropCapture={handleGridDrop}
+        >
           <Grid
             list={list.content}
             loading={loading && list.content.length === 0}
