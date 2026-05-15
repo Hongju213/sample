@@ -20,6 +20,10 @@ function getPointedElement(elements, event) {
   return elements.find(element => isPointInRect(event, element.getBoundingClientRect()));
 }
 
+function isEventInContainer(container, event) {
+  return isPointInRect(event, container.getBoundingClientRect());
+}
+
 function getGridDropTarget(container, event, gridApi, rows) {
   const row = getPointedElement(Array.from(container.querySelectorAll('.ag-row[row-index]')), event);
 
@@ -200,12 +204,17 @@ export default function TreeGridPanel({
     }
 
     const handleDragOver = event => {
+      if (!isEventInContainer(container, event)) {
+        clearDragOver(container);
+        return;
+      }
+
       allowDrop(event);
       markDragOver(container, getGridDropTarget(container, event, gridApiRef.current, list.content));
     };
 
     const handleDragLeave = event => {
-      if (container.contains(event.relatedTarget)) {
+      if (isEventInContainer(container, event)) {
         return;
       }
 
@@ -213,6 +222,10 @@ export default function TreeGridPanel({
     };
 
     const handleDrop = event => {
+      if (!isEventInContainer(container, event)) {
+        return;
+      }
+
       event.preventDefault();
       event.stopPropagation();
 
@@ -227,16 +240,16 @@ export default function TreeGridPanel({
       onApplyDrop(target.rowId, target.field, dragData);
     };
 
-    container.addEventListener('dragenter', handleDragOver, true);
-    container.addEventListener('dragover', handleDragOver, true);
-    container.addEventListener('dragleave', handleDragLeave, true);
-    container.addEventListener('drop', handleDrop, true);
+    document.addEventListener('dragenter', handleDragOver, true);
+    document.addEventListener('dragover', handleDragOver, true);
+    document.addEventListener('dragleave', handleDragLeave, true);
+    document.addEventListener('drop', handleDrop, true);
 
     return () => {
-      container.removeEventListener('dragenter', handleDragOver, true);
-      container.removeEventListener('dragover', handleDragOver, true);
-      container.removeEventListener('dragleave', handleDragLeave, true);
-      container.removeEventListener('drop', handleDrop, true);
+      document.removeEventListener('dragenter', handleDragOver, true);
+      document.removeEventListener('dragover', handleDragOver, true);
+      document.removeEventListener('dragleave', handleDragLeave, true);
+      document.removeEventListener('drop', handleDrop, true);
       clearDragOver(container);
     };
   }, [list.content, onApplyDrop]);
