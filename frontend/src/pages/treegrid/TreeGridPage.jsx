@@ -10,7 +10,7 @@ import './TreeGridPage.css';
 
 const { Title } = Typography;
 
-export default function TreeGridPage() {
+export default function TreeGridPage({ embedded = false }) {
   const { message } = App.useApp();
   const [selectedKey, setSelectedKey] = useState(null);
   const [queryParams, setQueryParams] = useState({
@@ -137,10 +137,12 @@ export default function TreeGridPage() {
   }, []);
 
   return (
-    <div className="tree-grid-page">
-      <Title level={4} className="tree-grid-title">
-        Tree + Grid
-      </Title>
+    <div className={embedded ? 'tree-grid-page tree-grid-page--embedded' : 'tree-grid-page'}>
+      {!embedded && (
+        <Title level={4} className="tree-grid-title">
+          Tree + Grid
+        </Title>
+      )}
 
       <div className="tree-grid-layout">
         <TreePanel

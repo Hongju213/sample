@@ -1,16 +1,13 @@
-import React from 'react';
+﻿import React from 'react';
 import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
-import { App, Alert, Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Tag, Typography } from 'antd';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { App, Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Tag, Typography } from 'antd';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Grid from '../../components/Grid.jsx';
 import {
   createSampleItem,
   deleteSampleItem,
-  fetchAgentBatchStatus,
   fetchSampleItems,
-  requestAgentBatch,
-  subscribeAgentBatchStatus,
   updateSampleItem
 } from '../../apis/sampleItemApi.js';
 import { formatDateTime, statusColor, statusLabels, statusOptions } from '../../utils/format.js';
@@ -36,58 +33,27 @@ function SampleSearch({ onSearch, onReset, refreshKey }) {
   return (
     <Card size="small" className="sample-search-card">
       <Form form={form} layout="inline" onFinish={onSearch}>
-        <Form.Item name="keyword" label="검색어">
+        <Form.Item name="keyword" label="寃?됱뼱">
           <Input
             allowClear
             className="sample-keyword"
-            placeholder="제목 / 설명"
+            placeholder="?쒕ぉ / ?ㅻ챸"
             prefix={<SearchOutlined className="sample-search-icon" />}
           />
         </Form.Item>
-        <Form.Item name="status" label="상태">
-          <Select allowClear className="sample-status" placeholder="전체" options={statusOptions} />
+        <Form.Item name="status" label="?곹깭">
+          <Select allowClear className="sample-status" placeholder="?꾩껜" options={statusOptions} />
         </Form.Item>
         <Form.Item>
           <Space>
             <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
-              조회
+              議고쉶
             </Button>
             <Button icon={<ReloadOutlined />} onClick={() => onReset(form)}>
-              초기화
-            </Button>
+              珥덇린??            </Button>
           </Space>
         </Form.Item>
       </Form>
-    </Card>
-  );
-}
-
-function AgentBatchTest({ status, loading, onRequestGet, onRequestPost }) {
-  // agent 테스트 전용 패널입니다.
-  // 요청 버튼은 긴 작업을 기다리지 않고 즉시 반환되는 sample API를 호출합니다.
-  // 상태 문구는 fetchAgentBatchStatus()의 polling 결과로 갱신됩니다.
-  const label = status?.message ?? '대기 중입니다.';
-  const type = status?.status === 'completed' ? 'success' : status?.status === 'requested' ? 'info' : 'warning';
-
-  return (
-    <Card size="small" className="sample-agent-card">
-      <div className="sample-agent-card__content">
-        <Alert
-          className="sample-agent-card__status"
-          type={type}
-          showIcon
-          message={label}
-          description={status?.jobId ? `Job ID: ${status.jobId}` : '에이전트 배치 콜백 테스트 대기 중'}
-        />
-        <Space>
-          <Button loading={loading} onClick={onRequestGet}>
-            GET 요청
-          </Button>
-          <Button type="primary" loading={loading} onClick={onRequestPost}>
-            POST 요청
-          </Button>
-        </Space>
-      </div>
     </Card>
   );
 }
@@ -242,7 +208,6 @@ function SampleItemModal({ open, mode, data, confirmLoading, onClose, onSubmit }
 
 export default function SamplePage(props) {
   const { message } = App.useApp();
-  const queryClient = useQueryClient();
   const gridRef = useRef(null);
   const [queryParams, setQueryParams] = useState({
     page: 1,
@@ -272,22 +237,6 @@ export default function SamplePage(props) {
     queryFn: () => fetchSampleItems({ ...queryParams, page: queryParams.page - 1 }),
     enabled: true
   });
-
-  const {
-    data: agentStatus
-  } = useQuery({
-    queryKey: ['agentBatchStatus'],
-    queryFn: fetchAgentBatchStatus,
-    // 테스트 단계에서는 버튼 요청이 실패하거나 외부에서 callback이 직접 들어와도
-    // 화면이 backend의 최신 상태를 따라가도록 상태 API를 계속 확인합니다.
-    retry: false
-  });
-
-  useEffect(() => {
-    return subscribeAgentBatchStatus(status => {
-      queryClient.setQueryData(['agentBatchStatus'], status);
-    });
-  }, [queryClient]);
 
   useEffect(() => {
     if (!gridData) {
@@ -319,43 +268,23 @@ export default function SamplePage(props) {
       return createSampleItem(values);
     },
     onSuccess: () => {
-      message.success(itemModalState.mode === 'edit' ? '수정되었습니다.' : '등록되었습니다.');
+      message.success(itemModalState.mode === 'edit' ? '?섏젙?섏뿀?듬땲??' : '?깅줉?섏뿀?듬땲??');
       setItemModalState({ open: false, mode: 'create', data: null });
       setRefreshKey(prev => prev + 1);
     },
     onError: () => {
-      message.error('저장에 실패했습니다.');
+      message.error('??μ뿉 ?ㅽ뙣?덉뒿?덈떎.');
     }
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteSampleItem,
     onSuccess: () => {
-      message.success('삭제되었습니다.');
+      message.success('??젣?섏뿀?듬땲??');
       setRefreshKey(prev => prev + 1);
     },
     onError: () => {
-      message.error('삭제에 실패했습니다.');
-    }
-  });
-
-  const agentMutation = useMutation({
-    mutationFn: requestAgentBatch,
-    onSuccess: data => {
-      const requestedStatus = {
-        jobId: data?.job_id,
-        status: 'requested',
-        message: data?.message ?? '요청되었습니다.',
-        method: data?.method,
-        payload: data,
-        updatedAt: new Date().toISOString()
-      };
-
-      queryClient.setQueryData(['agentBatchStatus'], requestedStatus);
-      message.info(requestedStatus.message);
-    },
-    onError: () => {
-      message.error('에이전트 요청에 실패했습니다.');
+      message.error('??젣???ㅽ뙣?덉뒿?덈떎.');
     }
   });
 
@@ -398,21 +327,14 @@ export default function SamplePage(props) {
     <div className="sample-page">
       <div className="sample-page__header">
         <Title level={4} className="sample-page__title">
-          샘플 목록
+          ?섑뵆 紐⑸줉
         </Title>
         <Button icon={<ReloadOutlined />} onClick={() => setRefreshKey(prev => prev + 1)}>
-          새로고침
+          ?덈줈怨좎묠
         </Button>
       </div>
 
       <SampleSearch onSearch={handleSearch} onReset={handleReset} refreshKey={refreshKey} />
-
-      <AgentBatchTest
-        status={agentStatus}
-        loading={agentMutation.isPending}
-        onRequestGet={() => agentMutation.mutate('GET')}
-        onRequestPost={() => agentMutation.mutate('POST')}
-      />
 
       <SampleGrid
         gridRef={gridRef}
