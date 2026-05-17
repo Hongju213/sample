@@ -258,8 +258,8 @@ export default function TreeGridPanel({
     <section className="grid-panel">
       <div className="grid-panel-header">
         <Space>
-          <span>{selectedKey ? `[${selectedKey}] Data` : 'Select a node'}</span>
-          {selectedKey && !loading && <Tag color="blue">Total {list.totalCount}</Tag>}
+          <span>{selectedKey ? `[${selectedKey}] 데이터` : '노드를 선택하세요'}</span>
+          {selectedKey && !loading && <Tag color="blue">총 {list.totalCount}</Tag>}
           {fetching && <Spin size="small" />}
         </Space>
         <Space>
@@ -279,10 +279,7 @@ export default function TreeGridPanel({
           <Empty description="트리를 선택하면 그리드가 조회됩니다." />
         </div>
       ) : (
-        <div
-          ref={gridContainerRef}
-          className="treegrid-grid"
-        >
+        <div ref={gridContainerRef} className="treegrid-grid">
           <Grid
             list={list.content}
             loading={loading && list.content.length === 0}
