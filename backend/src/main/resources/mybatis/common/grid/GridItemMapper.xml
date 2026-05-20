@@ -15,11 +15,11 @@
 
     <sql id="searchWhere">
         <where>
-            <if test="dto.nodeKey != null and dto.nodeKey != ''">
-                AND NODE_KEY = #{dto.nodeKey}
+            <if test="condition.nodeKey != null and condition.nodeKey != ''">
+                AND NODE_KEY = #{condition.nodeKey}
             </if>
-            <if test="dto.col1 != null and dto.col1 != ''">
-                AND LOWER(COL1) LIKE '%' || LOWER(#{dto.col1}) || '%'
+            <if test="condition.col1 != null and condition.col1 != ''">
+                AND LOWER(COL1) LIKE '%' || LOWER(#{condition.col1}) || '%'
             </if>
         </where>
     </sql>

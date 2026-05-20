@@ -1,4 +1,3 @@
-// 단순 라벨은 한 곳에 모아두면 깨진 문자열을 찾거나 문구를 교체하기 쉽다.
 export const ko = {
   menu: {
     home: '홈',
@@ -6,7 +5,8 @@ export const ko = {
     admin: '관리',
     common: '공통',
     template: '템플릿',
-    treeGrid: '트리+그리드'
+    treeGrid: 'Tree Grid',
+    agentTest: 'Agent Test'
   },
   status: {
     TODO: '대기',

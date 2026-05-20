@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Alert, App, Button, Card, Space } from 'antd';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../../constants/queryKeys.js';
 import {
   fetchAgentBatchStatus,
   requestAgentBatch,
@@ -12,14 +13,14 @@ export default function AgentBatchTest() {
   const queryClient = useQueryClient();
 
   const { data: status } = useQuery({
-    queryKey: ['agentBatchStatus'],
+    queryKey: [queryKeys.agentBatchStatus],
     queryFn: fetchAgentBatchStatus,
     retry: false
   });
 
   useEffect(() => {
     return subscribeAgentBatchStatus(nextStatus => {
-      queryClient.setQueryData(['agentBatchStatus'], nextStatus);
+      queryClient.setQueryData([queryKeys.agentBatchStatus], nextStatus);
     });
   }, [queryClient]);
 
@@ -29,13 +30,13 @@ export default function AgentBatchTest() {
       const requestedStatus = {
         jobId: data?.job_id,
         status: 'requested',
-        message: data?.message ?? '요청되었습니다.',
+        message: data?.message ?? '요청했습니다.',
         method: data?.method,
         payload: data,
         updatedAt: new Date().toISOString()
       };
 
-      queryClient.setQueryData(['agentBatchStatus'], requestedStatus);
+      queryClient.setQueryData([queryKeys.agentBatchStatus], requestedStatus);
       message.info(requestedStatus.message);
     },
     onError: () => {

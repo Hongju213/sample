@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Alert, Card, Spin, Tree } from 'antd';
 import { beginTreeDrag, endTreeDrag } from './treeGridUtils.js';
 
-export default function TreePanel({
+export function TreePanel({
   treeData,
   selectedKey,
   loading,
@@ -17,7 +17,7 @@ export default function TreePanel({
 
   return (
     <Card title="Tree" size="small" className="tree-panel">
-      {error && <Alert type="error" message="Tree data could not be loaded." showIcon />}
+      {error && <Alert type="error" message="Tree 데이터를 불러오지 못했습니다." showIcon />}
       {loading ? (
         <Spin className="panel-spinner" />
       ) : (

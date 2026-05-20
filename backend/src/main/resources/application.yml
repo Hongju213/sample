@@ -5,25 +5,23 @@ spring:
   application:
     name: sample-backend
   datasource:
-    # 개발/테스트 기본값은 H2 Oracle 호환 모드입니다.
-    # 실제 Oracle을 붙일 때는 DB_DRIVER/DB_URL/DB_USERNAME/DB_PASSWORD 환경변수만 바꾸면 됩니다.
+    # Local/test default uses H2 in Oracle compatibility mode.
+    # Set DB_DRIVER, DB_URL, DB_USERNAME, and DB_PASSWORD to use Oracle.
     driver-class-name: ${DB_DRIVER:org.h2.Driver}
     url: ${DB_URL:jdbc:h2:mem:sample;MODE=Oracle;DATABASE_TO_UPPER=true;DB_CLOSE_DELAY=-1}
     username: ${DB_USERNAME:sa}
     password: ${DB_PASSWORD:}
   flyway:
-    # 기존 migration SQL은 Oracle 문법/문자열 데이터를 그대로 담고 있어 H2 검증 단계에서는 기본 비활성화합니다.
-    # 스키마까지 실제로 검증하려면 H2용 migration 정리가 먼저 필요합니다.
+    # Enable this only when the target schema should be managed by migrations.
     enabled: ${FLYWAY_ENABLED:false}
     locations: classpath:db/migration
   jackson:
     time-zone: Asia/Seoul
 
 mybatis:
+  config-location: classpath:mybatis-config.xml
   mapper-locations: classpath:mybatis/common/**/*.xml
   type-aliases-package: com.example.sample
-  configuration:
-    map-underscore-to-camel-case: true
 
 management:
   endpoints:

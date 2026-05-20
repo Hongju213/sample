@@ -4,6 +4,9 @@ spring:
     url: jdbc:h2:mem:sample;MODE=Oracle;DATABASE_TO_UPPER=true;DB_CLOSE_DELAY=-1
     username: sa
     password:
+  sql:
+    init:
+      mode: always
 
 app:
   cors:

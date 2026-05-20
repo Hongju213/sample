@@ -9,5 +9,5 @@ import java.util.List;
 @Mapper
 public interface TreeNodeMapper {
 
-    List<TreeNodeDto> findAllByTreeNodeDto(@Param("dto") TreeNodeDto dto);
+    List<TreeNodeDto> findAllByTreeNodeDto(@Param("condition") TreeNodeDto treeNodeDto);
 }

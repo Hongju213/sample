@@ -22,17 +22,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class SampleApplicationTests {
+
     @Autowired
     private MockMvc mockMvc;
 
     @Test
-    @DisplayName("Basic auth, sample item CRUD API flow works")
+    @DisplayName("Basic auth and sample item CRUD API flow works")
     void sampleItemCrudFlow() throws Exception {
         var auth = httpBasic("root", "root");
         var payload = """
                 {
-                  "title": "통합 테스트",
-                  "description": "MockMvc로 CRUD 흐름을 검증합니다.",
+                  "title": "Integration test",
+                  "description": "MockMvc verifies the CRUD flow.",
                   "status": "TODO"
                 }
                 """;
@@ -43,36 +44,68 @@ class SampleApplicationTests {
 
         mockMvc.perform(get("/api/sample-items").with(auth))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.length()", greaterThanOrEqualTo(2)));
+                .andExpect(jsonPath("$.content.length()", greaterThanOrEqualTo(2)));
 
         var created = mockMvc.perform(post("/api/sample-items")
                         .with(auth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.title").value("통합 테스트"))
-                .andExpect(jsonPath("$.data.status").value("TODO"))
+                .andExpect(jsonPath("$.title").value("Integration test"))
+                .andExpect(jsonPath("$.status").value("TODO"))
                 .andReturn();
 
-        var id = JsonPathUtils.readLong(created.getResponse().getContentAsString(), "$.data.id");
+        var id = JsonPathUtils.readLong(created.getResponse().getContentAsString(), "$.id");
 
         mockMvc.perform(put("/api/sample-items/{id}", id)
                         .with(auth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "title": "통합 테스트 수정",
-                                  "description": "수정 API를 검증합니다.",
+                                  "title": "Integration test updated",
+                                  "description": "Update API verified.",
                                   "status": "DONE"
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.title").value("통합 테스트 수정"))
-                .andExpect(jsonPath("$.data.status").value("DONE"));
+                .andExpect(jsonPath("$.title").value("Integration test updated"))
+                .andExpect(jsonPath("$.status").value("DONE"));
 
         mockMvc.perform(delete("/api/sample-items/{id}", id).with(auth))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.id").value(id));
+                .andExpect(jsonPath("$.id").value(id));
+    }
+
+    @Test
+    @DisplayName("Tree and grid APIs return database-backed data")
+    void treeAndGridApiFlow() throws Exception {
+        var auth = httpBasic("root", "root");
+
+        mockMvc.perform(get("/api/tree-nodes").with(auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()", greaterThanOrEqualTo(2)))
+                .andExpect(jsonPath("$[0].nodeKey").value("aaa"))
+                .andExpect(jsonPath("$[0].children.length()", greaterThanOrEqualTo(1)))
+                .andExpect(jsonPath("$[0].children[0].nodeKey").value("aaa-1"));
+
+        mockMvc.perform(get("/api/grid-items")
+                        .with(auth)
+                        .param("nodeKey", "aaa-1-1")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()", greaterThanOrEqualTo(2)))
+                .andExpect(jsonPath("$.content[0].nodeKey").value("aaa-1-1"))
+                .andExpect(jsonPath("$.content[0].col1").value("aaa-1-1-col1-001"));
+
+        mockMvc.perform(get("/api/grid-items")
+                        .with(auth)
+                        .param("col1", "col1-002")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].col1").value("aaa-1-1-col1-002"));
     }
 
     private static class JsonPathUtils {

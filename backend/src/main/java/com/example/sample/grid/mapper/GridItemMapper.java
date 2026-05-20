@@ -9,9 +9,9 @@ import java.util.List;
 @Mapper
 public interface GridItemMapper {
 
-    List<GridItemDto> findAllByGridItemDto(@Param("dto") GridItemDto dto,
+    List<GridItemDto> findAllByGridItemDto(@Param("condition") GridItemDto gridItemDto,
                                            @Param("offset") long offset,
                                            @Param("limit") int limit);
 
-    int countByGridItemDto(@Param("dto") GridItemDto dto);
+    int countByGridItemDto(@Param("condition") GridItemDto gridItemDto);
 }

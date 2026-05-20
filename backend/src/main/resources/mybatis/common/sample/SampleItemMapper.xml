@@ -13,17 +13,17 @@
 
     <sql id="searchWhere">
         <where>
-            <if test="dto.keyword != null and dto.keyword != ''">
-                AND (LOWER(TITLE) LIKE '%' || LOWER(#{dto.keyword}) || '%'
-                  OR LOWER(DESCRIPTION) LIKE '%' || LOWER(#{dto.keyword}) || '%')
+            <if test="condition.keyword != null and condition.keyword != ''">
+                AND (LOWER(TITLE) LIKE '%' || LOWER(#{condition.keyword}) || '%'
+                  OR LOWER(DESCRIPTION) LIKE '%' || LOWER(#{condition.keyword}) || '%')
             </if>
-            <if test="dto.status != null">
-                AND STATUS = #{dto.status}
+            <if test="condition.status != null">
+                AND STATUS = #{condition.status}
             </if>
         </where>
     </sql>
 
-    <select id="findAllBySampleItemDto" resultMap="SampleItemDtoResultMap">
+    <select id="findAllBySampleItemSearchDto" resultMap="SampleItemDtoResultMap">
         SELECT ID, TITLE, DESCRIPTION, STATUS, CREATED_AT, UPDATED_AT
         FROM SAMPLE_ITEM
         <include refid="searchWhere"/>
@@ -31,7 +31,7 @@
         OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
     </select>
 
-    <select id="countBySampleItemDto" resultType="int">
+    <select id="countBySampleItemSearchDto" resultType="int">
         SELECT COUNT(*)
         FROM SAMPLE_ITEM
         <include refid="searchWhere"/>

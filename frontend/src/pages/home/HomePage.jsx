@@ -57,7 +57,7 @@ export default function HomePage() {
               </Descriptions.Item>
             </Descriptions>
             <Typography.Paragraph className="home-note">
-              주요 화면은 src/dev/testData.json 데이터만 사용합니다.
+              Sample과 Tree Grid 화면은 백엔드 API와 DB 데이터를 기준으로 조회합니다.
             </Typography.Paragraph>
           </Card>
         </Col>

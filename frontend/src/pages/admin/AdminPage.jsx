@@ -13,7 +13,7 @@ export default function AdminPage() {
     <>
       <div className="page-title">
         <h1>관리 샘플</h1>
-        <p>권한, 사용자, 설정 화면을 구성할 때 출발점으로 쓰는 기본 레이아웃입니다.</p>
+        <p>권한, 사용자, 설정 화면을 구성할 때 출발점으로 삼는 기본 레이아웃입니다.</p>
       </div>
 
       <Row gutter={[16, 16]}>

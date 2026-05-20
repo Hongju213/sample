@@ -1,3 +1,5 @@
+import { fetchJson, resolveApiUrl } from '../common/apiClient.js';
+
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
 const AGENT_BASE_URL = (import.meta.env.VITE_AGENT_BASE_URL ?? 'http://127.0.0.1:8000').replace(/\/$/, '');
 const AGENT_CALLBACK_BASE_URL = (import.meta.env.VITE_AGENT_CALLBACK_BASE_URL ?? API_BASE_URL).replace(/\/$/, '');
@@ -10,7 +12,7 @@ function resolveUrl(pathOrUrl, baseUrl = API_BASE_URL) {
   return `${baseUrl}${pathOrUrl}`;
 }
 
-async function fetchJson(pathOrUrl, options, baseUrl = API_BASE_URL) {
+async function fetchExternalJson(pathOrUrl, options, baseUrl = API_BASE_URL) {
   const url = resolveUrl(pathOrUrl, baseUrl);
   const response = await fetch(url, options);
   const contentType = response.headers.get('content-type') ?? '';
@@ -41,7 +43,7 @@ export async function requestAgentBatch(method = 'GET') {
   };
 
   if (method === 'POST') {
-    return fetchJson('/api/bat/test', {
+    return fetchExternalJson('/api/bat/test', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -54,7 +56,7 @@ export async function requestAgentBatch(method = 'GET') {
     callback_url: callbackUrl
   });
 
-  return fetchJson(`/api/bat/test?${searchParams.toString()}`, { method: 'GET' }, AGENT_BASE_URL);
+  return fetchExternalJson(`/api/bat/test?${searchParams.toString()}`, { method: 'GET' }, AGENT_BASE_URL);
 }
 
 export async function fetchAgentBatchStatus() {
@@ -62,7 +64,7 @@ export async function fetchAgentBatchStatus() {
 }
 
 export function subscribeAgentBatchStatus(onStatus, onError) {
-  const eventSource = new EventSource(resolveUrl('/api/agent-test/events'));
+  const eventSource = new EventSource(resolveApiUrl('/api/agent-test/events'));
 
   eventSource.addEventListener('agent-status', event => {
     onStatus(JSON.parse(event.data));

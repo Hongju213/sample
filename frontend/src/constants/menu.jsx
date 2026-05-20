@@ -2,6 +2,7 @@ import React from 'react';
 import {
   ApartmentOutlined,
   AppstoreOutlined,
+  ExperimentOutlined,
   HomeOutlined,
   SettingOutlined,
   TableOutlined,
@@ -9,8 +10,6 @@ import {
 } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 
-// Ant Design Menu가 요구하는 item 배열이다.
-// 라우터 경로를 key로 사용하면 현재 URL과 selectedKeys를 바로 비교할 수 있다.
 export const menuItems = [
   {
     key: '/',
@@ -40,6 +39,11 @@ export const menuItems = [
   {
     key: '/tree-grid',
     icon: <ApartmentOutlined />,
-    label: <Link to="/tree-grid">트리+그리드</Link>
+    label: <Link to="/tree-grid">Tree Grid</Link>
+  },
+  {
+    key: '/agent-test',
+    icon: <ExperimentOutlined />,
+    label: <Link to="/agent-test">Agent Test</Link>
   }
 ];

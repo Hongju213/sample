@@ -2,7 +2,7 @@ import React from 'react';
 import { GithubOutlined, KeyOutlined } from '@ant-design/icons';
 import { Button, Form, Input, Layout, Menu, Space, Typography } from 'antd';
 import { useLocation } from 'react-router-dom';
-import { menuItems } from '../contants/menu.jsx';
+import { menuItems } from '../constants/menu.jsx';
 import { useAuthStore } from '../store/authStore.js';
 import './AppShell.css';
 

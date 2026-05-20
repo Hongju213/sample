@@ -4,8 +4,8 @@ import com.example.sample.common.MessageHandler;
 import com.example.sample.tree.dto.TreeNodeDto;
 import com.example.sample.tree.mapper.TreeNodeMapper;
 import com.example.sample.tree.service.TreeNodeService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,28 +16,22 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
+@Slf4j
 public class TreeNodeServiceImpl implements TreeNodeService {
-
-    private static final Logger log = LoggerFactory.getLogger(TreeNodeServiceImpl.class);
 
     private final TreeNodeMapper treeNodeMapper;
     private final MessageHandler messageHandler;
 
-    public TreeNodeServiceImpl(TreeNodeMapper treeNodeMapper, MessageHandler messageHandler) {
-        this.treeNodeMapper = treeNodeMapper;
-        this.messageHandler = messageHandler;
-    }
-
     @Override
-    public List<TreeNodeDto> selectTreeNodes(TreeNodeDto dto) {
-        List<TreeNodeDto> flatList = treeNodeMapper.findAllByTreeNodeDto(dto);
+    public List<TreeNodeDto> selectTreeNodes(TreeNodeDto treeNodeDto) {
+        List<TreeNodeDto> flatList = treeNodeMapper.findAllByTreeNodeDto(treeNodeDto);
         return buildTree(flatList);
     }
 
-    // 플랫 리스트를 트리 구조로 조립
     private List<TreeNodeDto> buildTree(List<TreeNodeDto> flatList) {
         Map<String, TreeNodeDto> nodeMap = flatList.stream()
-                .collect(Collectors.toMap(TreeNodeDto::getNodeKey, n -> n));
+                .collect(Collectors.toMap(TreeNodeDto::getNodeKey, node -> node));
 
         List<TreeNodeDto> roots = new ArrayList<>();
 

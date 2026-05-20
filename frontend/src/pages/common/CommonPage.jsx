@@ -19,7 +19,7 @@ export default function CommonPage() {
               type="info"
               icon={<InfoCircleOutlined />}
               message="공통 Alert"
-              description="업무 화면에서 재사용할 수 있는 안내 메시지 패턴입니다."
+              description="업무 화면에서 사용할 수 있는 안내 메시지 패턴입니다."
             />
           </Card>
         </Col>

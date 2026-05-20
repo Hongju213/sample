@@ -28,7 +28,7 @@ const Grid = forwardRef(function Grid(
   },
   ref
 ) {
-  const { defaultColDef, onGridReady, ...restGridOptions } = gridOptions;
+  const { defaultColDef, onGridReady, getRowId, ...restGridOptions } = gridOptions;
   const safeCurrentPage = Math.max(currentPage || 1, 1);
   const safePages = Math.max(pages || 0, 0);
   const hasPagination = safePages > 0;
@@ -55,7 +55,7 @@ const Grid = forwardRef(function Grid(
           }}
           rowSelection={{ mode: 'singleRow', checkboxes: false, enableClickSelection: true }}
           theme="legacy"
-          getRowId={params => String(params.data.id)}
+          getRowId={getRowId ?? (params => String(params.data.id))}
           onRowClicked={onClicked}
           onRowDoubleClicked={onDoubleClicked}
           overlayNoRowsTemplate="<span class='common-grid__empty-text'>데이터가 없습니다.</span>"

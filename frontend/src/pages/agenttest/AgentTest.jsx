@@ -1,7 +1,7 @@
 import React from 'react';
 import { Typography } from 'antd';
 import AgentBatchTest from './AgentBatchTest.jsx';
-import TreeGridPage from '../treegrid/TreeGridPage.jsx';
+import TreeGridPage from '../TreeGridPage/index.jsx';
 import './AgentTest.css';
 
 const { Title } = Typography;
