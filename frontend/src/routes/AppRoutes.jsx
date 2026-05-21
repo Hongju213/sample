@@ -6,7 +6,7 @@ import AgentTest from '../pages/agenttest/AgentTest.jsx';
 import CommonPage from '../pages/common/CommonPage.jsx';
 import HomePage from '../pages/home/HomePage.jsx';
 import SamplePage from '../pages/SamplePage/index.jsx';
-import TemplatePage from '../pages/template/TemplatePage.jsx';
+import TemplatePage from '../pages/template/index.jsx';
 import TreeGridPage from '../pages/TreeGridPage/index.jsx';
 
 export default function AppRoutes() {

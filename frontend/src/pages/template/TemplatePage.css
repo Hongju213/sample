@@ -1,111 +1,33 @@
 .template-page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  height: 100%;
-  padding: 24px;
-  box-sizing: border-box;
+  min-height: calc(100vh - 112px);
+  gap: 12px;
 }
 
-.template-title {
-  margin-bottom: 0;
-}
-
-.search-card {
-  flex-shrink: 0;
-}
-
-.search-row {
-  width: 100%;
-}
-
-.search-item {
-  margin-bottom: 0;
-}
-
-.template-keyword {
-  width: 220px;
-}
-
-.template-status {
-  width: 120px;
-}
-
-.template-range {
-  width: 240px;
-}
-
-.template-search-icon {
-  color: #bbb;
-}
-
-.grid-card {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.grid-card .ant-card-body {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-height: 0;
-  padding: 12px;
-  gap: 8px;
-}
-
-.template-grid {
-  flex: 1;
-  min-height: 360px;
-}
-
-.template-pagination {
+.template-page__header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 6px 0;
-  border-top: 1px solid #f0f0f0;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.pg-btn {
-  min-width: 36px;
-  padding: 4px 10px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  background: #fff;
-  cursor: pointer;
-  font-size: 13px;
-  transition:
-    background 0.15s,
-    border-color 0.15s,
-    color 0.15s;
+.template-page__title {
+  margin: 0;
 }
 
-.pg-btn:hover:not(:disabled) {
-  border-color: #1f6feb;
-  color: #1f6feb;
-  background: #f0f5ff;
+.template-page .common-grid {
+  min-height: 460px;
+  border-radius: 0 0 6px 6px;
 }
 
-.pg-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
+.template-modal .ant-typography {
+  margin: 0;
+  font-size: 16px;
 }
 
-.pg-btn--active {
-  border-color: #1f6feb;
-  color: #fff;
-  background: #1f6feb;
-  font-weight: 600;
-}
-
-.pg-btn--active:hover {
-  color: #fff !important;
-  background: #1557c0 !important;
+.template-modal .ant-divider {
+  margin: 8px 0 16px;
 }
 
 .status-tag {
@@ -119,11 +41,6 @@
 .status-tag.status-todo {
   color: #595959;
   background: #f0f0f0;
-}
-
-.status-tag.status-doing {
-  color: #1677ff;
-  background: #e6f4ff;
 }
 
 .status-tag.status-done {
